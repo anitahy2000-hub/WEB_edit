@@ -42,6 +42,8 @@
         border-radius: 28px;
         background: var(--panel);
         box-shadow: var(--shadow);
+        min-width: 0;
+        max-width: 100%;
       }
 
       .hero {
@@ -70,6 +72,10 @@
         gap: 22px;
         margin-top: 22px;
         align-items: start;
+      }
+
+      .layout > * {
+        min-width: 0;
       }
 
       .panel,
@@ -306,12 +312,14 @@
       .output-grid {
         display: grid;
         gap: 18px;
+        min-width: 0;
       }
 
       .triple {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 18px;
+        min-width: 0;
       }
 
       .box {
@@ -319,6 +327,7 @@
         border: 1px solid var(--line);
         border-radius: 22px;
         background: rgba(255, 255, 255, 0.74);
+        min-width: 0;
       }
 
       .box h3 {
@@ -339,6 +348,8 @@
         max-height: 420px;
         overflow-y: auto;
         padding-right: 6px;
+        min-width: 0;
+        max-width: 100%;
       }
 
       .scroll-box::-webkit-scrollbar {
@@ -357,6 +368,21 @@
 
       #previewArea {
         min-height: 360px;
+        min-width: 0;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      #previewArea img {
+        display: block;
+        max-width: 100% !important;
+        width: auto;
+        height: auto;
+        margin: 14px auto;
+      }
+
+      #previewArea p {
+        overflow-wrap: anywhere;
       }
 
       .preview-shell {
@@ -364,6 +390,7 @@
         border-radius: 20px;
         padding: 18px;
         background: rgba(255, 255, 255, 0.56);
+        overflow: hidden;
       }
 
       .fullscreen-shell {
