@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>新闻后台图文格式整理工具</title>
+    <style>
+      :root {
+        --bg: #f5f0e8;
+        --panel: rgba(255, 252, 247, 0.92);
+        --ink: #1c252b;
+        --muted: #61707a;
+        --accent: #b2532d;
+        --accent-dark: #7f341f;
+        --line: rgba(28, 37, 43, 0.1);
+        --shadow: 0 20px 60px rgba(41, 33, 26, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(178, 83, 45, 0.14), transparent 24%),
+          linear-gradient(180deg, #eee5d8 0%, var(--bg) 46%, #faf7f2 100%);
+      }
+
+      .page {
+        width: min(1380px, calc(100% - 28px));
+        margin: 22px auto 40px;
+      }
+
+      .hero,
+      .panel,
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        padding: 32px;
+        background:
+          linear-gradient(140deg, rgba(178, 83, 45, 0.96), rgba(28, 37, 43, 0.95)),
+          var(--panel);
+        color: #fff9f2;
+      }
+
+      .hero h1 {
+        margin: 0 0 10px;
+        font-size: clamp(30px, 5vw, 54px);
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 920px;
+        color: rgba(255, 249, 242, 0.84);
+        line-height: 1.8;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+        margin-top: 22px;
+        align-items: start;
+      }
+
+      .panel,
+      .card {
+        padding: 22px;
+      }
+
+      .panel h2,
+      .card h2 {
+        margin: 0 0 12px;
+        font-size: 22px;
+      }
+
+      .panel p,
+      .helper {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .section {
+        margin-top: 18px;
+      }
+
+      .hidden-section {
+        display: none;
+      }
+
+      .section.hidden-section {
+        display: none;
+      }
+
+      .section label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .upload-box,
+      textarea,
+      input,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+      }
+
+      .upload-box,
+      input,
+      select {
+        padding: 12px 14px;
+      }
+
+      textarea {
+        min-height: 260px;
+        padding: 16px;
+        resize: vertical;
+        font: 14px/1.7 "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+
+      .editor-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 180px;
+        gap: 16px;
+        align-items: stretch;
+      }
+
+      .editor-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .editable-preview {
+        height: 520px;
+        width: 100%;
+        padding: 16px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.82);
+        line-height: 1.8;
+      }
+
+      .editable-preview:focus {
+        outline: 2px solid rgba(178, 83, 45, 0.22);
+        outline-offset: 2px;
+      }
+
+      .editable-preview h1 {
+        margin: 1em 0 14px;
+        font-size: 24px;
+        line-height: 1.4;
+      }
+
+      .editable-preview h1:first-child {
+        margin-top: 0;
+      }
+
+      .editable-preview h2 {
+        margin: 18px 0 10px;
+        font-size: 18px;
+        line-height: 1.5;
+      }
+
+      .editable-preview p {
+        margin: 0 0 14px;
+        text-align: justify;
+      }
+
+      .editable-preview img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 14px auto;
+        border-radius: 12px;
+      }
+
+      .editable-preview .image-caption {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+        margin: 4px 0 16px;
+      }
+
+      .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .setting-item {
+        display: grid;
+        gap: 6px;
+      }
+
+      .setting-item span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .upload-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .inline-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 0;
+        align-content: start;
+        position: sticky;
+        top: 24px;
+        align-self: start;
+      }
+
+      .editor-pane {
+        display: grid;
+      }
+
+      .editor-pane textarea {
+        height: 520px;
+        min-height: 520px;
+        width: 100%;
+        overflow-y: auto;
+      }
+
+      .copy-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin: 0 0 16px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .section-head label {
+        margin-bottom: 0;
+      }
+
+      .preview-toggle {
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 13px 14px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .primary:hover {
+        background: var(--accent-dark);
+      }
+
+      .secondary {
+        background: rgba(28, 37, 43, 0.08);
+        color: var(--ink);
+      }
+
+      .status {
+        min-height: 24px;
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .output-grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .triple {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .box {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .box h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      pre,
+      .code-output {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font: 13px/1.7 "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+
+      .scroll-box {
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      .scroll-box::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .scroll-box::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(28, 37, 43, 0.18);
+      }
+
+      .scroll-box::-webkit-scrollbar-track {
+        background: rgba(28, 37, 43, 0.04);
+        border-radius: 999px;
+      }
+
+      #previewArea {
+        min-height: 360px;
+      }
+
+      .preview-shell {
+        border: 1px dashed rgba(28, 37, 43, 0.14);
+        border-radius: 20px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .fullscreen-shell {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: none;
+        padding: 24px;
+        background: rgba(28, 37, 43, 0.42);
+        backdrop-filter: blur(8px);
+      }
+
+      .fullscreen-shell.is-open {
+        display: block;
+      }
+
+      .fullscreen-panel {
+        height: calc(100vh - 48px);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: rgba(255, 252, 247, 0.98);
+        box-shadow: var(--shadow);
+        padding: 22px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 18px;
+      }
+
+      .fullscreen-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .fullscreen-top-main {
+        flex: 1;
+        min-width: 0;
+        display: grid;
+        gap: 12px;
+      }
+
+      .fullscreen-top p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .fullscreen-grid {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .fullscreen-box {
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 18px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      .fullscreen-box h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .fullscreen-actions {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .fullscreen-editor,
+      .fullscreen-preview {
+        min-height: 0;
+        overflow-y: auto;
+        border: 1px solid rgba(28, 37, 43, 0.08);
+        border-radius: 16px;
+        background: #fff;
+        padding: 16px;
+      }
+
+      .fullscreen-editor:focus {
+        outline: 2px solid rgba(178, 83, 45, 0.22);
+        outline-offset: 2px;
+      }
+
+      .fullscreen-preview {
+        line-height: 1.8;
+      }
+
+      .helper {
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      @media (max-width: 1120px) {
+        .layout,
+        .triple,
+        .copy-actions,
+        .fullscreen-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .editor-stack,
+        .editor-pane,
+        .editable-preview {
+          width: 100%;
+        }
+
+        .inline-actions {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .editor-grid,
+        .settings-grid,
+        .actions,
+        .fullscreen-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .section-head,
+        .fullscreen-top {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .inline-actions {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          margin-top: 12px;
+        }
+
+        .editor-pane textarea,
+        .editable-preview {
+          width: 100%;
+          height: 360px;
+          min-height: 360px;
+        }
+
+        .fullscreen-shell {
+          padding: 12px;
+        }
+
+        .fullscreen-panel {
+          height: calc(100vh - 24px);
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>新闻后台图文格式整理工具</h1>
+        <p>
+          支持上传 Word 文档、粘贴原始文本或 HTML，自动识别标题、正文和图片，
+          再按照你设定的字号与图片尺寸生成整理后的文本、Markdown 和 HTML，适合新闻后台编辑直接使用。
+        </p>
+      </section>
+
+      <section class="layout">
+        <section class="panel">
+          <h2>输入与设置</h2>
+          <p>先导入原始素材，再设定格式参数，最后点击“运行整理”。</p>
+
+          <div class="section">
+            <label for="docxFile">上传 Word 文档</label>
+            <input id="docxFile" class="upload-box" type="file" accept=".docx" />
+          </div>
+
+          <div class="upload-actions">
+            <button id="convertDocxBtn" class="secondary">解析 Word</button>
+            <button id="stripImagesBtn" class="secondary">图片转占位</button>
+            <button id="sampleBtn" class="secondary">填充示例</button>
+          </div>
+
+          <div class="section hidden-section">
+            <label for="inputMode">原始素材类型</label>
+            <select id="inputMode">
+              <option value="auto">自动识别</option>
+              <option value="text">纯文本</option>
+              <option value="markdown">Markdown</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+
+          <div class="section">
+            <div class="section-head">
+              <label for="sourcePreview">可编辑预览</label>
+              <button id="openFullscreenPreviewBtn" class="secondary preview-toggle" type="button">全屏左右对照</button>
+            </div>
+            <div class="editor-grid">
+              <div class="editor-stack">
+                <div class="editor-pane hidden-section" hidden style="display:none !important;">
+                  <textarea
+                    id="inputText"
+                    placeholder="# 一级标题&#10;## 二级标题&#10;这里是正文。&#10;![图片](https://example.com/demo.jpg)"
+                  ></textarea>
+                </div>
+                <div id="sourcePreview" class="editable-preview" contenteditable="true"></div>
+              </div>
+              <div class="inline-actions">
+                <button id="markH1Btn" class="secondary" type="button">设为一级标题</button>
+                <button id="markH2Btn" class="secondary" type="button">设为二级标题</button>
+                <button id="boldBtn" class="secondary" type="button">加粗</button>
+                <button id="captionBtn" class="secondary" type="button">图片说明</button>
+                <button id="clearHeadingBtn" class="secondary" type="button">清除标题</button>
+              </div>
+            </div>
+            <p class="helper">这里显示的是可编辑图文预览。你可以直接在预览中选中文本，再点击右侧按钮调整标题、加粗和图片说明。</p>
+          </div>
+
+          <div class="section">
+            <label>格式设置</label>
+            <div class="settings-grid">
+              <label class="setting-item">
+                <span>一级标题字号</span>
+                <input id="h1Size" type="number" min="10" value="21" placeholder="一级标题字号" />
+              </label>
+              <label class="setting-item">
+                <span>二级标题字号</span>
+                <input id="h2Size" type="number" min="10" value="18" placeholder="二级标题字号" />
+              </label>
+              <label class="setting-item">
+                <span>正文字号</span>
+                <input id="bodySize" type="number" min="10" value="16" placeholder="正文字号" />
+              </label>
+              <label class="setting-item">
+                <span>图片宽度</span>
+                <input id="imageWidth" type="text" value="100%" placeholder="图片宽度" />
+              </label>
+              <label class="setting-item">
+                <span>图片高度</span>
+                <input id="imageHeight" type="text" value="auto" placeholder="图片高度" />
+              </label>
+              <label class="setting-item">
+                <span>图片显示方式</span>
+                <select id="imageFit">
+                  <option value="cover">图片裁切填满</option>
+                  <option value="contain">图片完整显示</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="runBtn" class="primary">运行整理</button>
+            <button id="clearBtn" class="secondary">清空</button>
+            <button id="indentBtn" class="secondary">首行缩进</button>
+            <button id="mergeTextBtn" class="secondary">合并文案</button>
+          </div>
+
+          <div id="status" class="status">等待输入素材。</div>
+          <p class="helper">
+            Word 文档当前支持 `.docx`。解析时会尽量识别一级标题、二级标题、正文和图片；如果原文不是标准标题样式，可能会按正文处理。
+          </p>
+        </section>
+
+        <section class="output-grid">
+          <section class="card">
+            <h2>整理结果</h2>
+            <div class="copy-actions">
+              <button id="copyMarkdownBtn" class="secondary">复制 Markdown</button>
+              <button id="copyHtmlBtn" class="secondary">复制 HTML</button>
+              <button id="exportWordBtn" class="secondary">导出 DOCX</button>
+            </div>
+            <div class="triple">
+              <div class="box">
+                <h3>Markdown</h3>
+                <div class="scroll-box">
+                  <pre id="markdownOutput"></pre>
+                </div>
+              </div>
+              <div class="box">
+                <h3>HTML</h3>
+                <div class="scroll-box">
+                  <div id="htmlOutput" class="code-output"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>预览</h2>
+            <div class="preview-shell">
+              <div id="previewArea"></div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div id="fullscreenShell" class="fullscreen-shell" aria-hidden="true">
+      <div class="fullscreen-panel">
+        <div class="fullscreen-top">
+          <div class="fullscreen-top-main">
+            <div>
+            <h2>全屏左右对照</h2>
+            <p>左边继续编辑图文内容，右边同步查看最终预览。</p>
+            </div>
+            <div class="fullscreen-actions">
+              <button id="fullscreenMarkH1Btn" class="secondary" type="button">设为一级标题</button>
+              <button id="fullscreenMarkH2Btn" class="secondary" type="button">设为二级标题</button>
+              <button id="fullscreenBoldBtn" class="secondary" type="button">加粗</button>
+              <button id="fullscreenCaptionBtn" class="secondary" type="button">图片说明</button>
+              <button id="fullscreenClearHeadingBtn" class="secondary" type="button">清除标题</button>
+            </div>
+          </div>
+          <button id="closeFullscreenPreviewBtn" class="secondary" type="button">关闭全屏</button>
+        </div>
+        <div class="fullscreen-grid">
+          <section class="fullscreen-box">
+            <h3>可编辑预览</h3>
+            <div id="fullscreenEditor" class="fullscreen-editor" contenteditable="true"></div>
+          </section>
+          <section class="fullscreen-box">
+            <h3>最终预览</h3>
+            <div id="fullscreenPreview" class="fullscreen-preview"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <script>
+      const docxFile = document.getElementById("docxFile");
+      const convertDocxBtn = document.getElementById("convertDocxBtn");
+      const stripImagesBtn = document.getElementById("stripImagesBtn");
+      const sampleBtn = document.getElementById("sampleBtn");
+      const inputMode = document.getElementById("inputMode");
+      const inputText = document.getElementById("inputText");
+      const sourcePreview = document.getElementById("sourcePreview");
+      const markH1Btn = document.getElementById("markH1Btn");
+      const markH2Btn = document.getElementById("markH2Btn");
+      const boldBtn = document.getElementById("boldBtn");
+      const captionBtn = document.getElementById("captionBtn");
+      const clearHeadingBtn = document.getElementById("clearHeadingBtn");
+      const h1Size = document.getElementById("h1Size");
+      const h2Size = document.getElementById("h2Size");
+      const bodySize = document.getElementById("bodySize");
+      const imageWidth = document.getElementById("imageWidth");
+      const imageHeight = document.getElementById("imageHeight");
+      const imageFit = document.getElementById("imageFit");
+      const runBtn = document.getElementById("runBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const indentBtn = document.getElementById("indentBtn");
+      const mergeTextBtn = document.getElementById("mergeTextBtn");
+      const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+      const copyHtmlBtn = document.getElementById("copyHtmlBtn");
+      const exportWordBtn = document.getElementById("exportWordBtn");
+      const status = document.getElementById("status");
+      const markdownOutput = document.getElementById("markdownOutput");
+      const htmlOutput = document.getElementById("htmlOutput");
+      const previewArea = document.getElementById("previewArea");
+      const openFullscreenPreviewBtn = document.getElementById("openFullscreenPreviewBtn");
+      const closeFullscreenPreviewBtn = document.getElementById("closeFullscreenPreviewBtn");
+      const fullscreenShell = document.getElementById("fullscreenShell");
+      const fullscreenEditor = document.getElementById("fullscreenEditor");
+      const fullscreenPreview = document.getElementById("fullscreenPreview");
+      const fullscreenMarkH1Btn = document.getElementById("fullscreenMarkH1Btn");
+      const fullscreenMarkH2Btn = document.getElementById("fullscreenMarkH2Btn");
+      const fullscreenBoldBtn = document.getElementById("fullscreenBoldBtn");
+      const fullscreenCaptionBtn = document.getElementById("fullscreenCaptionBtn");
+      const fullscreenClearHeadingBtn = document.getElementById("fullscreenClearHeadingBtn");
+
+      const state = {
+        indentFirstLine: false,
+        markdown: "",
+        htmlRaw: "",
+        html: "",
+        htmlLegacy: "",
+      };
+      let syncingPreview = false;
+      let syncingFullscreen = false;
+      let htmlRenderToken = 0;
+
+      function escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function inlineMarkdownToHtml(text) {
+        return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      }
+
+      function htmlInlineToMarkdown(text) {
+        return text
+          .replace(/<(strong|b)>(.*?)<\/(strong|b)>/gi, "**$2**")
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<\/?[^>]+>/g, "")
+          .trim();
+      }
+
+      function htmlToPlainText(htmlText) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${htmlText}</div>`, "text/html");
+        return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
+      }
+
+      function sanitizeRichTextHtml(htmlText) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${htmlText}</div>`, "text/html");
+        const allowedTags = new Set(["STRONG", "B", "EM", "I", "BR", "A"]);
+
+        Array.from(doc.body.querySelectorAll("*")).forEach((node) => {
+          Array.from(node.attributes).forEach((attr) => {
+            const name = attr.name.toLowerCase();
+            if (name === "href" && node.tagName === "A") {
+              return;
+            }
+            node.removeAttribute(attr.name);
+          });
+
+          if (!allowedTags.has(node.tagName)) {
+            const fragment = doc.createDocumentFragment();
+            while (node.firstChild) {
+              fragment.appendChild(node.firstChild);
+            }
+            node.replaceWith(fragment);
+          }
+        });
+
+        return doc.body.innerHTML.trim();
+      }
+
+      function getSettings() {
+        return {
+          h1Size: `${Number(h1Size.value || 21)}px`,
+          h2Size: `${Number(h2Size.value || 18)}px`,
+          bodySize: `${Number(bodySize.value || 16)}px`,
+          imageWidth: imageWidth.value.trim() || "100%",
+          imageHeight: imageHeight.value.trim() || "auto",
+          imageFit: imageFit.value,
+          indentFirstLine: state.indentFirstLine,
+        };
+      }
+
+      function joinParagraphText(left, right) {
+        if (!left) {
+          return right;
+        }
+        if (!right) {
+          return left;
+        }
+        if (/[A-Za-z0-9]$/.test(left) && /^[A-Za-z0-9]/.test(right)) {
+          return `${left} ${right}`;
+        }
+        return `${left}${right}`;
+      }
+
+      function joinParagraphHtml(left, right) {
+        if (!left) {
+          return right;
+        }
+        if (!right) {
+          return left;
+        }
+        if (/[A-Za-z0-9>]$/.test(left) && /^[A-Za-z0-9<]/.test(right)) {
+          return `${left} ${right}`;
+        }
+        return `${left}${right}`;
+      }
+
+      function isCaptionLikeParagraph(block) {
+        const text = String(block?.text || "").trim();
+        const html = String(block?.html || "");
+        return (
+          /^图片说明[:：]/.test(text) ||
+          /class=["']image-caption["']/i.test(html) ||
+          /data-role=["']caption["']/i.test(html)
+        );
+      }
+
+      function isMergeableBodyParagraph(block) {
+        const text = String(block?.text || "").trim();
+        return (
+          block &&
+          block.type === "p" &&
+          text &&
+          !text.startsWith("【图片") &&
+          !isCaptionLikeParagraph(block)
+        );
+      }
+
+      function detectMode(raw) {
+        const mode = inputMode.value;
+        if (mode !== "auto") {
+          return mode;
+        }
+        if (/<\s*[a-z][^>]*>/i.test(raw)) {
+          return "html";
+        }
+        if (/^\s{0,3}(#|!\[)/m.test(raw)) {
+          return "markdown";
+        }
+        return "text";
+      }
+
+      function isImageLine(line) {
+        return /^(https?:\/\/|data:image\/|\.\/|\/).+/i.test(line.trim());
+      }
+
+      function parseImageNode(node) {
+        return {
+          type: "img",
+          src: node.getAttribute("src") || "",
+          alt: node.getAttribute("alt") || "图片",
+          width: node.getAttribute("width") || "",
+          height: node.getAttribute("height") || "",
+          sourceDoc: node.getAttribute("data-source-doc") || "",
+          sourcePart: node.getAttribute("data-source-part") || "",
+          dataLayer: node.getAttribute("data-layer") || "",
+          align: node.getAttribute("align") || "",
+          border: node.getAttribute("border") || "",
+        };
+      }
+
+      function collectHtmlBlocks(node, blocks) {
+        if (!node) {
+          return;
+        }
+
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent.trim();
+          if (text) {
+            blocks.push({ type: "p", text, html: sanitizeRichTextHtml(escapeHtml(text)) });
+          }
+          return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+          return;
+        }
+
+        const tag = node.tagName.toLowerCase();
+
+        if (tag === "h1") {
+          blocks.push({
+            type: "h1",
+            text: node.textContent.trim(),
+            html: sanitizeRichTextHtml(node.innerHTML.trim()),
+          });
+          return;
+        }
+
+        if (tag === "h2") {
+          blocks.push({
+            type: "h2",
+            text: node.textContent.trim(),
+            html: sanitizeRichTextHtml(node.innerHTML.trim()),
+          });
+          return;
+        }
+
+        if (tag === "img") {
+          blocks.push(parseImageNode(node));
+          return;
+        }
+
+        if (tag === "figure") {
+          Array.from(node.children).forEach((child) => collectHtmlBlocks(child, blocks));
+          return;
+        }
+
+        if (
+          tag === "figcaption" ||
+          node.classList.contains("image-caption") ||
+          node.getAttribute("data-role") === "caption"
+        ) {
+          blocks.push({
+            type: "caption",
+            text: node.textContent.trim(),
+            html: sanitizeRichTextHtml(node.innerHTML.trim()),
+          });
+          return;
+        }
+
+        if (["p", "div", "section", "article", "li"].includes(tag)) {
+          const textOnlyChildren = Array.from(node.childNodes).filter(
+            (child) => child.nodeType === Node.TEXT_NODE || (child.nodeType === Node.ELEMENT_NODE && child.tagName.toLowerCase() !== "img")
+          );
+          const richHtml = sanitizeRichTextHtml(
+            textOnlyChildren
+              .map((child) =>
+                child.nodeType === Node.TEXT_NODE
+                  ? escapeHtml(child.textContent || "")
+                  : child.outerHTML || ""
+              )
+              .join("")
+              .trim()
+          );
+          const text = htmlToPlainText(richHtml);
+          if (text) {
+            blocks.push({ type: "p", text, html: richHtml });
+          }
+
+          Array.from(node.children).forEach((child) => {
+            if (child.tagName.toLowerCase() === "img" || child.querySelector?.("img")) {
+              collectHtmlBlocks(child, blocks);
+            }
+          });
+          return;
+        }
+
+        Array.from(node.childNodes).forEach((child) => collectHtmlBlocks(child, blocks));
+      }
+
+      function htmlToBlocks(rawHtml) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtml, "text/html");
+        const blocks = [];
+
+        Array.from(doc.body.childNodes).forEach((node) => collectHtmlBlocks(node, blocks));
+
+        return blocks;
+      }
+
+      function markdownToBlocks(markdown) {
+        const blocks = [];
+        markdown.split(/\r?\n/).forEach((rawLine) => {
+          const line = rawLine.trim();
+          if (!line) {
+            return;
+          }
+          if (line.startsWith("## ")) {
+            const text = line.slice(3).trim();
+            blocks.push({ type: "h2", text, html: sanitizeRichTextHtml(inlineMarkdownToHtml(text)) });
+            return;
+          }
+          if (line.startsWith("# ")) {
+            const text = line.slice(2).trim();
+            blocks.push({ type: "h1", text, html: sanitizeRichTextHtml(inlineMarkdownToHtml(text)) });
+            return;
+          }
+          const imageMatch = line.match(/^!\[(.*?)\]\((.+)\)$/);
+          if (imageMatch) {
+            blocks.push({
+              type: "img",
+              alt: imageMatch[1] || "图片",
+              src: imageMatch[2],
+            });
+            return;
+          }
+          if (line.startsWith("图片说明：")) {
+            const text = line.replace(/^图片说明：/, "").trim();
+            blocks.push({ type: "caption", text, html: sanitizeRichTextHtml(inlineMarkdownToHtml(text)) });
+            return;
+          }
+          blocks.push({ type: "p", text: line, html: sanitizeRichTextHtml(inlineMarkdownToHtml(line)) });
+        });
+        return blocks;
+      }
+
+      function textToBlocks(text) {
+        const lines = text.split(/\r?\n/);
+        const blocks = [];
+        let firstTextFound = false;
+
+        lines.forEach((rawLine) => {
+          const line = rawLine.trim();
+          if (!line) {
+            return;
+          }
+          if (isImageLine(line)) {
+            blocks.push({ type: "img", src: line, alt: "图片" });
+            return;
+          }
+          if (line.startsWith("图片说明：")) {
+            const text = line.replace(/^图片说明：/, "").trim();
+            blocks.push({ type: "caption", text, html: sanitizeRichTextHtml(escapeHtml(text)) });
+            return;
+          }
+          if (!firstTextFound) {
+            blocks.push({ type: "h1", text: line, html: sanitizeRichTextHtml(escapeHtml(line)) });
+            firstTextFound = true;
+            return;
+          }
+          blocks.push({ type: "p", text: line, html: sanitizeRichTextHtml(escapeHtml(line)) });
+        });
+
+        return blocks;
+      }
+
+      function blocksToEditableHtml(blocks) {
+        const settings = getSettings();
+        return blocks
+          .map((block) => {
+            if (block.type === "h1") {
+              return `<h1 style="font-size:${settings.h1Size};line-height:1.4;margin:1em 0 14px;font-weight:700;">${block.html || escapeHtml(
+                block.text
+              )}</h1>`;
+            }
+            if (block.type === "h2") {
+              return `<h2 style="font-size:${settings.h2Size};line-height:1.5;margin:18px 0 10px;font-weight:700;">${block.html || escapeHtml(
+                block.text
+              )}</h2>`;
+            }
+            if (block.type === "img") {
+              return `<img src="${escapeHtml(block.src)}" alt="${escapeHtml(
+                block.alt || "图片"
+              )}" style="display:block;margin:14px auto;"${block.width ? ` width="${escapeHtml(String(block.width))}"` : ""}${
+                block.height ? ` height="${escapeHtml(String(block.height))}"` : ""
+              }${block.dataLayer ? ` data-layer="${escapeHtml(block.dataLayer)}"` : ""}${
+                block.align ? ` align="${escapeHtml(block.align)}"` : ""
+              }${block.border ? ` border="${escapeHtml(block.border)}"` : ""
+              }${block.sourceDoc ? ` data-source-doc="${escapeHtml(block.sourceDoc)}"` : ""}${
+                block.sourcePart ? ` data-source-part="${escapeHtml(block.sourcePart)}"` : ""
+              } />`;
+            }
+            if (block.type === "caption") {
+              return `<p class="image-caption" data-role="caption" style="font-size:12px;line-height:1.7;margin:4px 0 16px;color:#808080;text-align:center;">${block.html || escapeHtml(
+                block.text
+              )}</p>`;
+            }
+            const indentStyle = settings.indentFirstLine ? "text-indent:2em;" : "";
+            return `<p style="font-size:${settings.bodySize};line-height:1.8;margin:0 0 14px;text-align:justify;${indentStyle}">${block.html || escapeHtml(
+              block.text
+            )}</p>`;
+          })
+          .join("");
+      }
+
+      function syncPreviewFromInput() {
+        if (syncingPreview) {
+          return;
+        }
+        const raw = inputText.value.trim();
+        if (!raw) {
+          sourcePreview.innerHTML = "";
+          syncFullscreenPanels();
+          return;
+        }
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        sourcePreview.innerHTML = blocksToEditableHtml(blocks);
+        syncFullscreenPanels();
+      }
+
+      function syncInputFromPreview() {
+        if (syncingFullscreen) {
+          return;
+        }
+        syncingPreview = true;
+        inputMode.value = "html";
+        inputText.value = sourcePreview.innerHTML.trim();
+        syncingPreview = false;
+        syncFullscreenPanels();
+      }
+
+      function syncInputFromFullscreen() {
+        syncingFullscreen = true;
+        sourcePreview.innerHTML = fullscreenEditor.innerHTML;
+        inputMode.value = "html";
+        inputText.value = sourcePreview.innerHTML.trim();
+        syncingFullscreen = false;
+      }
+
+      function syncFullscreenPanels() {
+        if (!fullscreenEditor || !fullscreenPreview) {
+          return;
+        }
+        if (document.activeElement !== fullscreenEditor) {
+          fullscreenEditor.innerHTML = sourcePreview.innerHTML;
+        }
+        fullscreenPreview.innerHTML = previewArea.innerHTML;
+      }
+
+      function openFullscreenPreview() {
+        syncFullscreenPanels();
+        fullscreenShell.classList.add("is-open");
+        fullscreenShell.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeFullscreenPreview() {
+        fullscreenShell.classList.remove("is-open");
+        fullscreenShell.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+      }
+
+      function getActiveEditableRoot() {
+        const selection = document.getSelection();
+        if (!selection) {
+          return null;
+        }
+        if (fullscreenShell.classList.contains("is-open") && fullscreenEditor.contains(selection.anchorNode)) {
+          return fullscreenEditor;
+        }
+        if (sourcePreview.contains(selection.anchorNode)) {
+          return sourcePreview;
+        }
+        return null;
+      }
+
+      function selectionInPreview() {
+        const selection = document.getSelection();
+        return !!(selection && getActiveEditableRoot());
+      }
+
+      function applyPreviewBlockFormat(format) {
+        const selection = document.getSelection();
+        const activeRoot = getActiveEditableRoot();
+        if (!selection || !selection.rangeCount || !activeRoot) {
+          status.textContent = "请先在右侧预览中选中或定位到一段文字。";
+          return;
+        }
+
+        let block = selection.anchorNode.nodeType === Node.ELEMENT_NODE
+          ? selection.anchorNode
+          : selection.anchorNode.parentElement;
+
+        while (block && block !== activeRoot && !/^(P|H1|H2|FIGCAPTION|DIV)$/.test(block.tagName)) {
+          block = block.parentElement;
+        }
+
+        if (!block || block === activeRoot) {
+          status.textContent = "请把光标放在一段正文或标题中再操作。";
+          return;
+        }
+
+        const replacement = document.createElement(
+          format === "caption" ? "p" : format
+        );
+        replacement.innerHTML = block.innerHTML;
+
+        if (format === "caption") {
+          replacement.className = "image-caption";
+          replacement.setAttribute("data-role", "caption");
+        }
+
+        block.replaceWith(replacement);
+        if (activeRoot === fullscreenEditor) {
+          syncInputFromFullscreen();
+          syncFullscreenPanels();
+        } else {
+          syncInputFromPreview();
+        }
+      }
+
+      function applyHeadingMarker(level) {
+        if (selectionInPreview()) {
+          applyPreviewBlockFormat(level === 0 ? "p" : level === 1 ? "h1" : "h2");
+          status.textContent =
+            level === 1
+              ? "已在预览中设为一级标题。"
+              : level === 2
+                ? "已在预览中设为二级标题。"
+                : "已在预览中清除标题。";
+          return;
+        }
+
+        const value = inputText.value;
+        const start = inputText.selectionStart;
+        const end = inputText.selectionEnd;
+
+        if (start === end) {
+          status.textContent = "请先在文本框中选中要设置的文字或整行内容。";
+          return;
+        }
+
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        const lineEndIndex = value.indexOf("\n", end);
+        const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+        const selectedBlock = value.slice(lineStart, lineEnd);
+
+        const updatedBlock = selectedBlock
+          .split("\n")
+          .map((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              return line;
+            }
+
+            const base = trimmed.replace(/^#{1,2}\s+/, "");
+            if (level === 0) {
+              return base;
+            }
+
+            const prefix = level === 1 ? "# " : "## ";
+            return `${prefix}${base}`;
+          })
+          .join("\n");
+
+        inputText.value = `${value.slice(0, lineStart)}${updatedBlock}${value.slice(lineEnd)}`;
+        inputText.focus();
+        inputText.setSelectionRange(lineStart, lineStart + updatedBlock.length);
+
+        if (level === 1) {
+          status.textContent = "已将选中内容设为一级标题。";
+        } else if (level === 2) {
+          status.textContent = "已将选中内容设为二级标题。";
+        } else {
+          status.textContent = "已清除选中内容的标题标记。";
+        }
+      }
+
+      function applyBold() {
+        if (selectionInPreview()) {
+          document.execCommand("bold");
+          syncInputFromPreview();
+          status.textContent = "已在预览中加粗选中内容。";
+          return;
+        }
+
+        const start = inputText.selectionStart;
+        const end = inputText.selectionEnd;
+        if (start === end) {
+          status.textContent = "请先选中要加粗的文字。";
+          return;
+        }
+
+        const value = inputText.value;
+        const selected = value.slice(start, end);
+        inputText.value = `${value.slice(0, start)}**${selected}**${value.slice(end)}`;
+        inputText.focus();
+        inputText.setSelectionRange(start, end + 4);
+        syncPreviewFromInput();
+        status.textContent = "已将选中内容加粗。";
+      }
+
+      function applyCaption() {
+        if (selectionInPreview()) {
+          applyPreviewBlockFormat("caption");
+          status.textContent = "已在预览中设为图片说明。";
+          return;
+        }
+
+        const value = inputText.value;
+        const start = inputText.selectionStart;
+        const end = inputText.selectionEnd;
+
+        if (start === end) {
+          status.textContent = "请先选中要设为图片说明的文字。";
+          return;
+        }
+
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        const lineEndIndex = value.indexOf("\n", end);
+        const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex;
+        const selectedBlock = value.slice(lineStart, lineEnd);
+
+        const updatedBlock = selectedBlock
+          .split("\n")
+          .map((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+              return line;
+            }
+            return `图片说明：${trimmed.replace(/^图片说明：/, "")}`;
+          })
+          .join("\n");
+
+        inputText.value = `${value.slice(0, lineStart)}${updatedBlock}${value.slice(lineEnd)}`;
+        inputText.focus();
+        inputText.setSelectionRange(lineStart, lineStart + updatedBlock.length);
+        syncPreviewFromInput();
+        status.textContent = "已将选中内容设为图片说明。";
+      }
+
+      function normalizeBlocks(raw, mode) {
+        if (!raw.trim()) {
+          return [];
+        }
+        if (mode === "html") {
+          return htmlToBlocks(raw);
+        }
+        if (mode === "markdown") {
+          return markdownToBlocks(raw);
+        }
+        return textToBlocks(raw);
+      }
+
+      function blocksToPlainText(blocks) {
+        return blocks
+          .map((block) => {
+            if (block.type === "h1") {
+              return `【一级标题】${block.text}`;
+            }
+            if (block.type === "h2") {
+              return `【二级标题】${block.text}`;
+            }
+            if (block.type === "img") {
+              return `【图片】${block.src}`;
+            }
+            if (block.type === "caption") {
+              return `【图片说明】${htmlToPlainText(block.html || block.text)}`;
+            }
+            return htmlToPlainText(block.html || block.text);
+          })
+          .join("\n\n");
+      }
+      function blocksToMarkdown(blocks) {
+        return blocks
+          .map((block) => {
+            if (block.type === "h1") {
+              return `# ${block.text}`;
+            }
+            if (block.type === "h2") {
+              return `## ${block.text}`;
+            }
+            if (block.type === "img") {
+              return `![${block.alt || "图片"}](${block.src})`;
+            }
+            if (block.type === "caption") {
+              return `图片说明：${htmlInlineToMarkdown(block.html || block.text)}`;
+            }
+            return htmlInlineToMarkdown(block.html || block.text);
+          })
+          .join("\n\n");
+      }
+
+      function blocksToHtml(blocks, settings) {
+        return blocks
+          .map((block) => {
+            if (block.type === "h1") {
+              return `<h1 style="font-size:${settings.h1Size};line-height:1.4;margin:1em 0 14px;font-weight:700;">${block.html || escapeHtml(
+                block.text
+              )}</h1>`;
+            }
+            if (block.type === "h2") {
+              return `<h2 style="font-size:${settings.h2Size};line-height:1.5;margin:18px 0 10px;font-weight:700;">${block.html || escapeHtml(
+                block.text
+              )}</h2>`;
+            }
+            if (block.type === "img") {
+              const widthValue = String(block.width || "").trim();
+              const heightValue = String(block.height || "").trim();
+              const widthAttr = widthValue && widthValue !== "undefined" ? ` width="${escapeHtml(widthValue)}"` : "";
+              const heightAttr = heightValue && heightValue !== "undefined" ? ` height="${escapeHtml(heightValue)}"` : "";
+              const dataLayerAttr = block.dataLayer
+                ? ` data-layer="${escapeHtml(block.dataLayer)}"`
+                : ' data-layer="photo"';
+              const alignAttr = block.align
+                ? ` align="${escapeHtml(block.align)}"`
+                : ' align="BOTTOM"';
+              const sourceDocAttr = block.sourceDoc
+                ? ` data-source-doc="${escapeHtml(block.sourceDoc)}"`
+                : "";
+              const sourcePartAttr = block.sourcePart
+                ? ` data-source-part="${escapeHtml(block.sourcePart)}"`
+                : "";
+              const borderAttr = block.border
+                ? ` border="${escapeHtml(block.border)}"`
+                : ' border="0"';
+              return `<img${dataLayerAttr} src="${escapeHtml(
+                block.src
+              )}" style="display:block;margin:14px auto;"${alignAttr}${widthAttr}${heightAttr}${sourceDocAttr}${sourcePartAttr}${borderAttr}/>`;
+            }
+            if (block.type === "caption") {
+              return `<p class="image-caption" data-role="caption" style="font-size:12px;line-height:1.7;margin:4px 0 16px;color:#808080;text-align:center;">${block.html || escapeHtml(
+                block.text
+              )}</p>`;
+            }
+            const indentStyle = settings.indentFirstLine ? "text-indent:2em;" : "";
+            return `<p style="font-size:${settings.bodySize};line-height:1.8;margin:0 0 14px;text-align:justify;${indentStyle}">${block.html || escapeHtml(
+              block.text
+            )}</p>`;
+          })
+          .join("\n");
+      }
+
+      function getDisplayHtml(htmlText) {
+        return htmlText.replace(
+          /data:image\/[a-zA-Z0-9.+-]+\s*;\s*(?:data:image\/[a-zA-Z0-9.+-]+\s*;\s*)?base64,[A-Za-z0-9+/=\s]+/g,
+          "[内嵌图片数据已省略，复制时会保留完整内容]"
+        );
+      }
+
+      function chunkString(text, chunkSize) {
+        const chunks = [];
+        for (let index = 0; index < text.length; index += chunkSize) {
+          chunks.push(text.slice(index, index + chunkSize));
+        }
+        return chunks;
+      }
+
+      function buildDocxHtmlDocument(htmlBody) {
+        return `<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>formatted-content</title>
+  </head>
+  <body>${htmlBody}</body>
+</html>`;
+      }
+
+      function normalizeImageSource(src) {
+        const raw = String(src || "").trim();
+        if (!raw) {
+          return "";
+        }
+
+        if (!/^data:image\//i.test(raw)) {
+          return raw;
+        }
+
+        const compact = raw.replace(/\s+/g, "");
+        const normalized = compact.replace(
+          /^(data:image\/[a-zA-Z0-9.+-]+;)(?:data:image\/[a-zA-Z0-9.+-]+;)?base64,/i,
+          "$1base64,"
+        );
+
+        const match = normalized.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)$/i);
+        if (!match) {
+          return compact;
+        }
+
+        return `data:${match[1]};base64,${match[2]}`;
+      }
+
+      function blobToDataUrl(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      async function inlineHtmlImages(htmlText) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div id="root">${htmlText}</div>`, "text/html");
+        const root = doc.getElementById("root");
+        const images = Array.from(root.querySelectorAll("img"));
+
+        await Promise.all(
+          images.map(async (img) => {
+            const originalSrc = img.getAttribute("src") || "";
+            const normalizedSrc = normalizeImageSource(originalSrc);
+
+            if (normalizedSrc && normalizedSrc !== originalSrc) {
+              img.setAttribute("src", normalizedSrc);
+            }
+
+            const src = img.getAttribute("src") || "";
+            if (!src) {
+              // Keep empty src as-is.
+            } else if (src.startsWith("data:image/")) {
+              img.setAttribute("src", normalizeImageSource(src));
+            } else if (/^https?:\/\//i.test(src)) {
+              // Keep external URL as-is.
+            } else {
+              try {
+                const response = await fetch(src);
+                if (response.ok) {
+                  const blob = await response.blob();
+                  const dataUrl = await blobToDataUrl(blob);
+
+                  if (typeof dataUrl === "string") {
+                    img.setAttribute("src", normalizeImageSource(dataUrl));
+                  }
+                }
+              } catch (error) {
+                // Keep the original src when inlining fails.
+              }
+            }
+
+            const normalized = doc.createElement("img");
+            normalized.setAttribute("src", normalizeImageSource(img.getAttribute("src") || ""));
+
+            const alt = img.getAttribute("alt");
+            const width = img.getAttribute("width");
+            const height = img.getAttribute("height");
+
+            if (alt) {
+              normalized.setAttribute("alt", alt);
+            }
+            if (width) {
+              normalized.setAttribute("width", width);
+            }
+            if (height) {
+              normalized.setAttribute("height", height);
+            }
+
+            img.replaceWith(normalized);
+          })
+        );
+
+        return root.innerHTML.trim();
+      }
+
+      function formatHtmlForLegacyEditors(htmlText) {
+        const htmlWithLegacyDataUrl = htmlText.replace(
+          /src="(data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+))"/g,
+          (fullMatch, _wholeDataUrl, mimeSubtype, base64Data) => {
+            const mime = `data:image/${mimeSubtype.toLowerCase()}`;
+            const wrappedBase64 = chunkString(base64Data, 76)
+              .map((line) => `      ${line}`)
+              .join("\n");
+            return `src="\n      ${mime};\n      ${mime};base64,${wrappedBase64}\n      "`;
+          }
+        );
+
+        return htmlWithLegacyDataUrl.replace(
+          /<img\b([^>]*)\/?>/g,
+          '<p style="text-align:center"><img$1/></p>'
+        );
+      }
+
+      async function renderOutputs(blocks) {
+        const settings = getSettings();
+        state.markdown = blocksToMarkdown(blocks);
+        state.htmlRaw = blocksToHtml(blocks, settings);
+        state.html = state.htmlRaw;
+        state.htmlLegacy = state.htmlRaw;
+        const token = ++htmlRenderToken;
+
+        markdownOutput.textContent = state.markdown;
+        if (htmlOutput) {
+          htmlOutput.textContent = getDisplayHtml(state.htmlRaw);
+        }
+        previewArea.innerHTML = state.htmlRaw;
+        syncFullscreenPanels();
+
+        const externalHtml = await inlineHtmlImages(state.htmlRaw);
+        if (token !== htmlRenderToken) {
+          return;
+        }
+
+        state.html = externalHtml;
+        state.htmlLegacy = formatHtmlForLegacyEditors(state.html);
+        if (htmlOutput) {
+          htmlOutput.textContent = getDisplayHtml(state.htmlLegacy);
+        }
+        syncFullscreenPanels();
+      }
+
+      async function replaceImagesWithPlaceholders() {
+        const raw = inputText.value.trim();
+        if (!raw) {
+          status.textContent = "请先上传 Word 或输入内容。";
+          return;
+        }
+
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        let imageIndex = 0;
+        const replacedBlocks = blocks.map((block) => {
+          if (block.type !== "img") {
+            return block;
+          }
+
+          imageIndex += 1;
+          const marker = `【图片${imageIndex}】`;
+          return {
+            type: "p",
+            text: marker,
+            html: escapeHtml(marker),
+          };
+        });
+
+        if (!imageIndex) {
+          status.textContent = "当前内容里没有可替换的图片。";
+          return;
+        }
+
+        inputMode.value = "html";
+        inputText.value = blocksToHtml(replacedBlocks, getSettings());
+        syncPreviewFromInput();
+        await renderOutputs(replacedBlocks);
+        status.textContent = `已将 ${imageIndex} 张图片替换为图片占位标记。`;
+      }
+
+      function mergeAdjacentCopy(blocks) {
+        const merged = [];
+        const maxParagraphLength = 300;
+
+        for (const block of blocks) {
+          const prev = merged[merged.length - 1];
+          const nextLength =
+            String(prev?.text || "").length + String(block.text || "").length;
+          const canMerge =
+            isMergeableBodyParagraph(prev) &&
+            isMergeableBodyParagraph(block) &&
+            nextLength <= maxParagraphLength;
+
+          if (canMerge) {
+            prev.text = joinParagraphText(prev.text || "", block.text || "");
+            prev.html = joinParagraphHtml(prev.html || "", block.html || "");
+            continue;
+          }
+
+          merged.push({ ...block });
+        }
+
+        return merged;
+      }
+
+      async function toggleFirstLineIndent() {
+        state.indentFirstLine = !state.indentFirstLine;
+        indentBtn.classList.toggle("primary", state.indentFirstLine);
+        indentBtn.classList.toggle("secondary", !state.indentFirstLine);
+
+        const raw = inputText.value.trim();
+        if (!raw) {
+          status.textContent = state.indentFirstLine
+            ? "已开启首行缩进。"
+            : "已关闭首行缩进。";
+          return;
+        }
+
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        await renderOutputs(blocks);
+        status.textContent = state.indentFirstLine
+          ? "已开启首行缩进，每段首行缩进两个字符。"
+          : "已关闭首行缩进。";
+      }
+
+      async function mergeCopywriting() {
+        const raw = inputText.value.trim();
+        if (!raw) {
+          status.textContent = "请先输入原始素材。";
+          return;
+        }
+
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        const mergedBlocks = mergeAdjacentCopy(blocks);
+        inputMode.value = "html";
+        inputText.value = blocksToHtml(mergedBlocks, getSettings());
+        syncPreviewFromInput();
+        await renderOutputs(mergedBlocks);
+        status.textContent = "已按原文顺序合并相邻正文段落；标题和图片说明不会参与合并。";
+      }
+
+      async function runFormatting() {
+        const raw = inputText.value.trim();
+        if (!raw) {
+          status.textContent = "请先输入原始素材，或者先上传 Word。";
+          return;
+        }
+
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        if (!blocks.length) {
+          status.textContent = "没有识别到可整理的内容。";
+          return;
+        }
+
+        status.textContent = "正在生成可外发 HTML，请稍候...";
+        await renderOutputs(blocks);
+        status.textContent = "整理完成。HTML 中的本地图片已自动转成可外部渲染的内嵌格式。";
+      }
+
+      async function convertDocx() {
+        const [file] = docxFile.files || [];
+        if (!file) {
+          status.textContent = "请先选择一个 .docx 文件。";
+          return;
+        }
+
+        status.textContent = "正在解析 Word 文档，请稍候...";
+        convertDocxBtn.disabled = true;
+
+        try {
+          let formattedHtml = "";
+
+          if (window.mammoth) {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await window.mammoth.convertToHtml(
+              { arrayBuffer },
+              {
+                convertImage: window.mammoth.images.imgElement((image) =>
+                  image.read("base64").then((imageBuffer) => ({
+                    src: `data:${image.contentType};base64,${imageBuffer}`,
+                    alt: image.altText || "文档图片",
+                  }))
+                ),
+              }
+            );
+            formattedHtml = result.value || "";
+          } else {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            const response = await fetch("/api/convert-docx", {
+              method: "POST",
+              body: formData,
+            });
+            const payload = await response.json();
+
+            if (!response.ok) {
+              throw new Error(payload.error || "解析失败");
+            }
+
+            formattedHtml = payload.formattedHtml || "";
+          }
+
+          inputMode.value = "html";
+          inputText.value = formattedHtml;
+          const blocks = normalizeBlocks(formattedHtml, "html");
+          syncPreviewFromInput();
+          await renderOutputs(blocks);
+          status.textContent = `Word 解析完成：${file.name}，已生成可继续编辑的图文内容。`;
+        } catch (error) {
+          status.textContent = error.message || "Word 解析失败。";
+        } finally {
+          convertDocxBtn.disabled = false;
+        }
+      }
+
+      async function copyText(content, successMessage) {
+        if (!content.trim()) {
+          status.textContent = "当前没有可复制内容。";
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(content);
+          status.textContent = successMessage;
+        } catch (error) {
+          status.textContent = "复制失败，请手动复制。";
+        }
+      }
+
+      function exportWordDocument() {
+        if (!state.html.trim()) {
+          status.textContent = "当前没有可导出的内容，请先运行整理。";
+          return;
+        }
+
+        status.textContent = "正在生成 DOCX，请稍候...";
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replaceAll(":", "-");
+
+        if (window.htmlDocx && typeof window.htmlDocx.asBlob === "function") {
+          const blob = window.htmlDocx.asBlob(buildDocxHtmlDocument(state.html));
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = `formatted-content-${timestamp}.docx`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+          status.textContent = "DOCX 文档开始下载。";
+          return;
+        }
+
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/api/export-docx";
+        form.style.display = "none";
+
+        const htmlField = document.createElement("textarea");
+        htmlField.name = "html";
+        htmlField.value = state.html;
+        form.appendChild(htmlField);
+
+        const filenameField = document.createElement("input");
+        filenameField.type = "hidden";
+        filenameField.name = "filename";
+        filenameField.value = `formatted-content-${timestamp}`;
+        form.appendChild(filenameField);
+
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+        status.textContent = "DOCX 文档开始下载。";
+      }
+
+      function fillSample() {
+        inputMode.value = "markdown";
+        inputText.value =
+          "# 上海创智学院发布春季论坛活动预告\n\n## 活动亮点\n\n本次论坛将围绕人工智能、数字传播和青年创新创业展开分享。\n\n![活动主视觉](https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80)\n\n## 报名方式\n\n读者可通过学院官方公众号和网站报名参加。";
+        syncPreviewFromInput();
+        status.textContent = "示例内容已填入。";
+      }
+
+      function clearAll() {
+        docxFile.value = "";
+        inputText.value = "";
+        sourcePreview.innerHTML = "";
+        markdownOutput.textContent = "";
+        if (htmlOutput) {
+          htmlOutput.textContent = "";
+        }
+        previewArea.innerHTML = "";
+        syncFullscreenPanels();
+        state.indentFirstLine = false;
+        indentBtn.classList.remove("primary");
+        indentBtn.classList.add("secondary");
+        state.markdown = "";
+        state.htmlRaw = "";
+        state.html = "";
+        state.htmlLegacy = "";
+        status.textContent = "内容已清空。";
+      }
+
+      async function refreshCurrentOutputs() {
+        syncPreviewFromInput();
+        const raw = inputText.value.trim();
+        if (!raw) {
+          return;
+        }
+        const blocks = normalizeBlocks(raw, detectMode(raw));
+        await renderOutputs(blocks);
+      }
+
+      inputText.addEventListener("input", syncPreviewFromInput);
+      sourcePreview.addEventListener("input", syncInputFromPreview);
+      fullscreenEditor.addEventListener("input", syncInputFromFullscreen);
+      h1Size.addEventListener("input", refreshCurrentOutputs);
+      h2Size.addEventListener("input", refreshCurrentOutputs);
+      bodySize.addEventListener("input", refreshCurrentOutputs);
+      convertDocxBtn.addEventListener("click", convertDocx);
+      stripImagesBtn.addEventListener("click", replaceImagesWithPlaceholders);
+      sampleBtn.addEventListener("click", fillSample);
+      runBtn.addEventListener("click", runFormatting);
+      clearBtn.addEventListener("click", clearAll);
+      indentBtn.addEventListener("click", toggleFirstLineIndent);
+      mergeTextBtn.addEventListener("click", mergeCopywriting);
+      markH1Btn.addEventListener("click", () => applyHeadingMarker(1));
+      markH2Btn.addEventListener("click", () => applyHeadingMarker(2));
+      boldBtn.addEventListener("click", applyBold);
+      captionBtn.addEventListener("click", applyCaption);
+      clearHeadingBtn.addEventListener("click", () => applyHeadingMarker(0));
+      fullscreenMarkH1Btn.addEventListener("click", () => applyHeadingMarker(1));
+      fullscreenMarkH2Btn.addEventListener("click", () => applyHeadingMarker(2));
+      fullscreenBoldBtn.addEventListener("click", applyBold);
+      fullscreenCaptionBtn.addEventListener("click", applyCaption);
+      fullscreenClearHeadingBtn.addEventListener("click", () => applyHeadingMarker(0));
+      copyMarkdownBtn.addEventListener("click", () =>
+        copyText(state.markdown, "Markdown 已复制。")
+      );
+      copyHtmlBtn.addEventListener("click", () =>
+        copyText(state.htmlLegacy || state.html, "HTML 已复制，已按旧版编辑器更易识别的图片格式输出。")
+      );
+      exportWordBtn.addEventListener("click", exportWordDocument);
+      openFullscreenPreviewBtn.addEventListener("click", openFullscreenPreview);
+      closeFullscreenPreviewBtn.addEventListener("click", closeFullscreenPreview);
+      fullscreenShell.addEventListener("click", (event) => {
+        if (event.target === fullscreenShell) {
+          closeFullscreenPreview();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && fullscreenShell.classList.contains("is-open")) {
+          closeFullscreenPreview();
+        }
+      });
+      syncPreviewFromInput();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>上海创智学院</title>
+    <style>
+      :root {
+        --bg: #f6f1e8;
+        --paper: rgba(255, 252, 246, 0.84);
+        --ink: #182126;
+        --muted: #52606b;
+        --accent: #c96d42;
+        --accent-deep: #7e3422;
+        --gold: #d6b067;
+        --line: rgba(24, 33, 38, 0.1);
+        --shadow: 0 24px 80px rgba(41, 34, 24, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(214, 176, 103, 0.2), transparent 28%),
+          radial-gradient(circle at 85% 20%, rgba(201, 109, 66, 0.16), transparent 20%),
+          linear-gradient(180deg, #efe6d5 0%, var(--bg) 55%, #f8f4ed 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(24, 33, 38, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(24, 33, 38, 0.03) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 90%);
+      }
+
+      .page {
+        width: min(1160px, calc(100% - 40px));
+        margin: 24px auto 48px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 88px 64px 56px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 32px;
+        background:
+          linear-gradient(140deg, rgba(126, 52, 34, 0.94), rgba(24, 33, 38, 0.92)),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+        box-shadow: var(--shadow);
+        color: #fff9f0;
+      }
+
+      .hero::before,
+      .hero::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        filter: blur(4px);
+      }
+
+      .hero::before {
+        width: 280px;
+        height: 280px;
+        right: -60px;
+        top: -40px;
+        background: radial-gradient(circle, rgba(214, 176, 103, 0.72), transparent 72%);
+      }
+
+      .hero::after {
+        width: 200px;
+        height: 200px;
+        left: -60px;
+        bottom: -70px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 72%);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+        letter-spacing: 0.12em;
+      }
+
+      .hero h1 {
+        max-width: 760px;
+        margin: 20px 0 18px;
+        font-family: "STSong", "Songti SC", serif;
+        font-size: clamp(40px, 6vw, 78px);
+        line-height: 1.05;
+        letter-spacing: 0.04em;
+      }
+
+      .hero p {
+        max-width: 620px;
+        margin: 0;
+        color: rgba(255, 249, 240, 0.82);
+        font-size: 18px;
+        line-height: 1.85;
+      }
+
+      .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 42px;
+      }
+
+      .stat {
+        padding: 20px 22px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 30px;
+        font-weight: 700;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 8px;
+        color: rgba(255, 249, 240, 0.72);
+        font-size: 14px;
+      }
+
+      .content {
+        display: grid;
+        grid-template-columns: 1.25fr 0.95fr;
+        gap: 22px;
+        margin-top: 22px;
+      }
+
+      .card {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--paper);
+        backdrop-filter: blur(14px);
+        box-shadow: var(--shadow);
+      }
+
+      .card h2 {
+        margin: 0 0 16px;
+        font-size: 28px;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.9;
+        font-size: 16px;
+      }
+
+      .grid-two {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(201, 109, 66, 0.12);
+        color: var(--accent-deep);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .major-list,
+      .highlights,
+      .timeline {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .major-item,
+      .highlight-item,
+      .timeline-item {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(24, 33, 38, 0.06);
+      }
+
+      .major-item h3,
+      .highlight-item h3,
+      .timeline-item h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .major-item p,
+      .highlight-item p,
+      .timeline-item p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+
+      .faculty {
+        margin-top: 18px;
+        padding: 22px;
+        border-radius: 24px;
+        background:
+          linear-gradient(135deg, rgba(214, 176, 103, 0.18), rgba(201, 109, 66, 0.08)),
+          rgba(255, 255, 255, 0.66);
+      }
+
+      .faculty strong {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 22px;
+      }
+
+      .quote {
+        margin-top: 18px;
+        padding: 24px;
+        border-left: 4px solid var(--accent);
+        border-radius: 0 20px 20px 0;
+        background: rgba(24, 33, 38, 0.04);
+        font-family: "STSong", "Songti SC", serif;
+        font-size: 21px;
+        line-height: 1.8;
+      }
+
+      .footer {
+        margin-top: 22px;
+        padding: 22px 28px;
+        border-radius: 24px;
+        background: rgba(24, 33, 38, 0.92);
+        color: rgba(255, 249, 240, 0.82);
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .footer strong {
+        color: #fff;
+      }
+
+      @media (max-width: 900px) {
+        .hero {
+          padding: 72px 28px 36px;
+        }
+
+        .hero-stats,
+        .content,
+        .grid-two {
+          grid-template-columns: 1fr;
+        }
+
+        .page {
+          width: min(100% - 24px, 1160px);
+        }
+      }
+
+      @media (max-width: 520px) {
+        .hero h1 {
+          font-size: 38px;
+        }
+
+        .card,
+        .footer {
+          padding: 22px 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">ACADEMY PROFILE</div>
+        <h1>上海创智学院</h1>
+        <p>
+          星海创新学院是一所以“融合、实践、国际化”为核心理念的现代化学院，
+          致力于培养兼具专业能力、人文素养与社会责任感的复合型人才。
+          学院重视课堂深度，也强调真实场景中的成长，让每一位学生都能在探索中找到自己的方向。
+        </p>
+
+        <div class="hero-stats">
+          <div class="stat">
+            <strong>12+</strong>
+            <span>特色专业与交叉培养方向</span>
+          </div>
+          <div class="stat">
+            <strong>3000+</strong>
+            <span>在校学生共同构成多元学习社区</span>
+          </div>
+          <div class="stat">
+            <strong>80%</strong>
+            <span>课程融入项目实践、竞赛或企业合作</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="content">
+        <div>
+          <article class="card">
+            <span class="pill">学院概况</span>
+            <h2>以学生成长为中心的教育生态</h2>
+            <p>
+              学院坚持“厚基础、强实践、重创新”的培养路径，构建了通识教育、
+              专业课程、研究训练与社会实践相互贯通的教学体系。通过开放实验室、
+              创新工作坊、学术论坛与企业协作项目，学生可以在学习阶段就形成解决真实问题的能力。
+            </p>
+
+            <div class="grid-two">
+              <div class="highlight-item">
+                <h3>开放式培养</h3>
+                <p>支持跨专业选修、导师制辅导与个性化成长方案，鼓励学生探索复合型发展路径。</p>
+              </div>
+              <div class="highlight-item">
+                <h3>实践导向</h3>
+                <p>通过实训基地、创新竞赛与合作课题，让知识与应用在同一条成长线上发生连接。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="card" style="margin-top: 22px;">
+            <span class="pill">专业方向</span>
+            <h2>面向未来的学科布局</h2>
+            <div class="major-list">
+              <div class="major-item">
+                <h3>人工智能与数据科学</h3>
+                <p>聚焦智能系统、数据分析与算法应用，培养具备前沿技术视野和工程实践能力的人才。</p>
+              </div>
+              <div class="major-item">
+                <h3>数字媒体与创意设计</h3>
+                <p>融合视觉表达、交互设计与数字内容生产，强调审美能力、叙事能力与技术实现并重。</p>
+              </div>
+              <div class="major-item">
+                <h3>智能制造与工程管理</h3>
+                <p>关注先进制造、系统协同与项目管理，培养能够适应产业升级需求的应用型人才。</p>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div>
+          <article class="card">
+            <span class="pill">师资力量</span>
+            <h2>多元背景的导师团队</h2>
+            <p>
+              学院拥有一支兼具学术深度与产业经验的教师队伍，
+              其中既有长期从事科研与教学的专家学者，也有参与重大项目实践的行业导师。
+              教师不仅是知识的传递者，更是学生成长道路上的同行者。
+            </p>
+            <div class="faculty">
+              <strong>导师支持体系</strong>
+              <p>
+                每位学生在学业规划、科研训练、竞赛指导与职业发展等方面，
+                都可以获得来自专业导师与辅导团队的持续陪伴。
+              </p>
+            </div>
+            <div class="quote">
+              “让学生在看见世界的同时，也逐渐看见更好的自己。”
+            </div>
+          </article>
+
+          <article class="card" style="margin-top: 22px;">
+            <span class="pill">校园生活</span>
+            <h2>学习之外，同样精彩</h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <h3>学术活动</h3>
+                <p>学院定期举办讲座、论坛、读书会与科研分享，营造开放而有温度的学术氛围。</p>
+              </div>
+              <div class="timeline-item">
+                <h3>学生社团</h3>
+                <p>从科技创新到艺术体育，从公益服务到创业实践，多样社团为兴趣与表达提供舞台。</p>
+              </div>
+              <div class="timeline-item">
+                <h3>国际交流</h3>
+                <p>通过短期访学、联合课程与海外合作项目，帮助学生建立更广阔的全球视野。</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div>
+          <strong>上海创智学院</strong><br />
+          让教育连接理想、实践与未来
+        </div>
+        <div>地址：上海市华发路上海创智学院路 699 弄 | 电话：400-123-4567 | 邮箱：info@xinghai.edu</div>
+      </footer>
+    </main>
+  </body>
+</html>

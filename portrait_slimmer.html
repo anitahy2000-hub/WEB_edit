@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>人像瘦身小程序</title>
+    <style>
+      :root {
+        --bg: #f4efe7;
+        --panel: rgba(255, 252, 247, 0.88);
+        --ink: #1d252b;
+        --muted: #5f6b73;
+        --accent: #b84e2f;
+        --line: rgba(29, 37, 43, 0.1);
+        --shadow: 0 24px 60px rgba(45, 35, 28, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          sans-serif;
+        color: var(--ink);
+        position: relative;
+        background:
+          linear-gradient(rgba(244, 239, 231, 0.66), rgba(248, 245, 240, 0.72)),
+          url("./images/portrait-bg.jpeg") center / cover no-repeat fixed;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at top left, rgba(184, 78, 47, 0.18), transparent 26%),
+          linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.12));
+      }
+
+      .page {
+        width: min(1160px, calc(100% - 28px));
+        margin: 24px auto 40px;
+      }
+
+      .hero,
+      .panel,
+      .canvas-card {
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .hero {
+        padding: 34px 30px;
+        background:
+          linear-gradient(140deg, rgba(184, 78, 47, 0.94), rgba(29, 37, 43, 0.94)),
+          var(--panel);
+        color: #fff8f2;
+      }
+
+      .hero h1 {
+        margin: 0 0 10px;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1.08;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 760px;
+        color: rgba(255, 248, 242, 0.82);
+        line-height: 1.8;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 22px;
+        margin-top: 22px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel h2,
+      .canvas-card h2 {
+        margin: 0 0 14px;
+        font-size: 22px;
+      }
+
+      .field {
+        margin-top: 18px;
+      }
+
+      .field label,
+      .hint strong {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .file-input,
+      .button,
+      .range {
+        width: 100%;
+      }
+
+      .file-input {
+        padding: 14px;
+        border: 1px dashed rgba(29, 37, 43, 0.18);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .range-value {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .button-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .button {
+        border: 0;
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .button.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      .button.secondary {
+        background: rgba(29, 37, 43, 0.08);
+        color: var(--ink);
+      }
+
+      .button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .hint {
+        margin-top: 20px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(29, 37, 43, 0.04);
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .canvas-card {
+        padding: 22px;
+      }
+
+      .canvas-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .preview-box {
+        padding: 14px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.76);
+        border: 1px solid rgba(29, 37, 43, 0.08);
+      }
+
+      .preview-box h3 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      canvas {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        background:
+          linear-gradient(45deg, rgba(29, 37, 43, 0.05) 25%, transparent 25%),
+          linear-gradient(-45deg, rgba(29, 37, 43, 0.05) 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, rgba(29, 37, 43, 0.05) 75%),
+          linear-gradient(-45deg, transparent 75%, rgba(29, 37, 43, 0.05) 75%);
+        background-size: 18px 18px;
+        background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      }
+
+      .status {
+        margin-top: 14px;
+        color: var(--muted);
+        line-height: 1.7;
+        min-height: 28px;
+      }
+
+      @media (max-width: 920px) {
+        .layout,
+        .canvas-grid,
+        .button-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <h1>人像瘦身小程序</h1>
+        <p>
+          上传任意一张人像图片，系统会对画面中心区域做平滑横向压缩，
+          生成视觉上更“瘦”的人物效果。整个处理都在浏览器本地完成，不会上传图片。
+        </p>
+      </section>
+
+      <section class="layout">
+        <aside class="panel">
+          <h2>操作面板</h2>
+
+          <div class="field">
+            <label for="fileInput">选择人像图片</label>
+            <input id="fileInput" class="file-input" type="file" accept="image/*" />
+          </div>
+
+          <div class="field">
+            <label for="strength">瘦身强度</label>
+            <input id="strength" class="range" type="range" min="0" max="100" value="35" />
+            <div id="strengthValue" class="range-value">当前强度：35%</div>
+          </div>
+
+          <div class="field">
+            <label for="focus">中心聚焦</label>
+            <input id="focus" class="range" type="range" min="20" max="90" value="58" />
+            <div id="focusValue" class="range-value">作用范围：58%</div>
+          </div>
+
+          <div class="button-row">
+            <button id="processBtn" class="button primary" disabled>生成瘦身图</button>
+            <button id="downloadBtn" class="button secondary" disabled>下载结果</button>
+          </div>
+
+          <div class="hint">
+            <strong>使用建议</strong>
+            适合人物位于画面中央的半身照、全身照或证件风格照片。<br />
+            如果人物偏左偏右、多人同框，或者背景里有明显直线，变形痕迹会更容易被看出来。
+          </div>
+        </aside>
+
+        <section class="canvas-card">
+          <h2>预览区域</h2>
+          <div class="canvas-grid">
+            <div class="preview-box">
+              <h3>原图</h3>
+              <canvas id="sourceCanvas"></canvas>
+            </div>
+            <div class="preview-box">
+              <h3>瘦身后</h3>
+              <canvas id="resultCanvas"></canvas>
+            </div>
+          </div>
+          <div id="status" class="status">请选择一张图片开始处理。</div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const fileInput = document.getElementById("fileInput");
+      const strengthInput = document.getElementById("strength");
+      const focusInput = document.getElementById("focus");
+      const strengthValue = document.getElementById("strengthValue");
+      const focusValue = document.getElementById("focusValue");
+      const processBtn = document.getElementById("processBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+      const status = document.getElementById("status");
+      const sourceCanvas = document.getElementById("sourceCanvas");
+      const resultCanvas = document.getElementById("resultCanvas");
+      const sourceCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
+      const resultCtx = resultCanvas.getContext("2d", { willReadFrequently: true });
+
+      const state = {
+        image: null,
+        sourceData: null,
+      };
+
+      function updateLabels() {
+        strengthValue.textContent = `当前强度：${strengthInput.value}%`;
+        focusValue.textContent = `作用范围：${focusInput.value}%`;
+      }
+
+      function resizeCanvasForImage(img) {
+        const maxSide = 1200;
+        let width = img.width;
+        let height = img.height;
+        const scale = Math.min(1, maxSide / Math.max(width, height));
+
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+
+        sourceCanvas.width = width;
+        sourceCanvas.height = height;
+        resultCanvas.width = width;
+        resultCanvas.height = height;
+      }
+
+      function drawSourceImage() {
+        sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+        sourceCtx.drawImage(state.image, 0, 0, sourceCanvas.width, sourceCanvas.height);
+        state.sourceData = sourceCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
+        resultCtx.putImageData(state.sourceData, 0, 0);
+      }
+
+      function sampleBilinear(data, width, height, x, y) {
+        const clampedX = Math.max(0, Math.min(width - 1, x));
+        const clampedY = Math.max(0, Math.min(height - 1, y));
+        const x0 = Math.floor(clampedX);
+        const y0 = Math.floor(clampedY);
+        const x1 = Math.min(width - 1, x0 + 1);
+        const y1 = Math.min(height - 1, y0 + 1);
+        const dx = clampedX - x0;
+        const dy = clampedY - y0;
+
+        const idx00 = (y0 * width + x0) * 4;
+        const idx10 = (y0 * width + x1) * 4;
+        const idx01 = (y1 * width + x0) * 4;
+        const idx11 = (y1 * width + x1) * 4;
+
+        const rgba = [0, 0, 0, 0];
+
+        for (let i = 0; i < 4; i += 1) {
+          const top = data[idx00 + i] * (1 - dx) + data[idx10 + i] * dx;
+          const bottom = data[idx01 + i] * (1 - dx) + data[idx11 + i] * dx;
+          rgba[i] = top * (1 - dy) + bottom * dy;
+        }
+
+        return rgba;
+      }
+
+      function renderSlimmedImage() {
+        if (!state.sourceData) {
+          return;
+        }
+
+        const { width, height, data } = state.sourceData;
+        const output = resultCtx.createImageData(width, height);
+        const out = output.data;
+        const strength = Number(strengthInput.value) / 100;
+        const focus = Number(focusInput.value) / 100;
+        const cx = width / 2;
+        const cy = height / 2;
+        const verticalBias = height * 0.08;
+        const halfW = width / 2;
+        const halfH = height / 2;
+
+        for (let y = 0; y < height; y += 1) {
+          const ny = Math.abs(y - (cy + verticalBias)) / halfH;
+          const verticalFalloff = Math.max(0, 1 - Math.pow(Math.min(1, ny), 1.8));
+
+          for (let x = 0; x < width; x += 1) {
+            const dx = x - cx;
+            const nx = Math.abs(dx) / halfW;
+            const centerWeight = Math.max(0, 1 - Math.pow(Math.min(1, nx / focus), 2.2));
+            const effect = strength * centerWeight * verticalFalloff;
+            const localScale = Math.max(0.72, 1 - effect * 0.38);
+            const sourceX = cx + dx / localScale;
+            const sourceY = y;
+            const rgba = sampleBilinear(data, width, height, sourceX, sourceY);
+            const idx = (y * width + x) * 4;
+
+            out[idx] = rgba[0];
+            out[idx + 1] = rgba[1];
+            out[idx + 2] = rgba[2];
+            out[idx + 3] = rgba[3];
+          }
+        }
+
+        resultCtx.putImageData(output, 0, 0);
+      }
+
+      function loadImage(file) {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            state.image = img;
+            resizeCanvasForImage(img);
+            drawSourceImage();
+            processBtn.disabled = false;
+            downloadBtn.disabled = false;
+            status.textContent = "图片已载入。你可以调整参数，然后点击“生成瘦身图”。";
+          };
+          img.src = reader.result;
+        };
+
+        reader.readAsDataURL(file);
+      }
+
+      fileInput.addEventListener("change", (event) => {
+        const [file] = event.target.files || [];
+        if (!file) {
+          return;
+        }
+
+        status.textContent = "正在读取图片...";
+        loadImage(file);
+      });
+
+      strengthInput.addEventListener("input", updateLabels);
+      focusInput.addEventListener("input", updateLabels);
+
+      processBtn.addEventListener("click", () => {
+        status.textContent = "正在生成瘦身图，请稍候...";
+
+        requestAnimationFrame(() => {
+          renderSlimmedImage();
+          status.textContent = "处理完成。你可以继续调整参数，或直接下载结果图。";
+        });
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = resultCanvas.toDataURL("image/png");
+        link.download = "slimmed-portrait.png";
+        link.click();
+      });
+
+      updateLabels();
+    </script>
+  </body>
+</html>
