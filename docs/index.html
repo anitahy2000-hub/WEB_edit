@@ -274,6 +274,10 @@
         margin-bottom: 0;
       }
 
+      .section-head h2 {
+        margin: 0;
+      }
+
       .preview-toggle {
         padding: 10px 14px;
         font-size: 14px;
@@ -307,6 +311,35 @@
         margin-top: 14px;
         color: var(--muted);
         font-size: 14px;
+      }
+
+      .sync-status {
+        min-height: 20px;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        transition: color 0.2s ease;
+      }
+
+      .sync-status.is-busy {
+        color: var(--accent-dark);
+      }
+
+      .sync-status.is-ready {
+        color: #4f6f52;
+      }
+
+      .copy-status {
+        min-height: 18px;
+        margin: 4px 0 10px;
+        color: #4f6f52;
+        font-size: 13px;
+        opacity: 0;
+        transition: opacity 0.18s ease;
+      }
+
+      .copy-status.is-visible {
+        opacity: 1;
       }
 
       .output-grid {
@@ -441,7 +474,7 @@
       .fullscreen-grid {
         min-height: 0;
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) 220px;
         gap: 18px;
       }
 
@@ -463,18 +496,46 @@
 
       .fullscreen-actions {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: 1fr;
         gap: 10px;
+        align-content: start;
+      }
+
+      .fullscreen-actions button {
+        min-height: 52px;
+      }
+
+      .fullscreen-tools {
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 18px;
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 12px;
+      }
+
+      .fullscreen-tools h3 {
+        margin: 0;
+        font-size: 18px;
       }
 
       .fullscreen-editor,
       .fullscreen-preview {
         min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         border: 1px solid rgba(28, 37, 43, 0.08);
         border-radius: 16px;
         background: #fff;
         padding: 16px;
+      }
+
+      .fullscreen-editor {
+        font-size: 16px;
+        line-height: 1.9;
+        padding: 20px;
       }
 
       .fullscreen-editor:focus {
@@ -484,6 +545,20 @@
 
       .fullscreen-preview {
         line-height: 1.8;
+      }
+
+      .fullscreen-editor img,
+      .fullscreen-preview img {
+        display: block;
+        max-width: 100% !important;
+        width: auto;
+        height: auto;
+        margin: 14px auto;
+      }
+
+      .fullscreen-editor p,
+      .fullscreen-preview p {
+        overflow-wrap: anywhere;
       }
 
       .helper {
@@ -528,6 +603,10 @@
           flex-direction: column;
         }
 
+        .fullscreen-grid {
+          grid-template-columns: 1fr;
+        }
+
         .inline-actions {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           margin-top: 12px;
@@ -556,7 +635,7 @@
       <section class="hero">
         <h1>新闻后台图文格式整理工具</h1>
         <p>
-          支持上传 Word 文档、粘贴原始文本或 HTML，自动识别标题、正文和图片，
+          支持上传 Word / PDF 文档、粘贴原始文本或 HTML，自动识别标题、正文和图片，
           再按照你设定的字号与图片尺寸生成整理后的文本、Markdown 和 HTML，适合新闻后台编辑直接使用。
         </p>
       </section>
@@ -567,14 +646,14 @@
           <p>先导入原始素材，再设定格式参数，最后点击“运行整理”。</p>
 
           <div class="section">
-            <label for="docxFile">上传 Word 文档</label>
-            <input id="docxFile" class="upload-box" type="file" accept=".docx" />
+            <label for="docxFile">上传 Word / PDF 文档</label>
+            <input id="docxFile" class="upload-box" type="file" accept=".docx,.pdf,application/pdf" />
           </div>
 
           <div class="upload-actions">
-            <button id="convertDocxBtn" class="secondary">解析 Word</button>
+            <button id="convertDocxBtn" class="secondary">解析文档</button>
             <button id="stripImagesBtn" class="secondary">图片转占位</button>
-            <button id="sampleBtn" class="secondary">填充示例</button>
+            <button id="openFullscreenPreviewBtn" class="secondary preview-toggle" type="button">全屏编辑</button>
           </div>
 
           <div class="section hidden-section">
@@ -590,7 +669,6 @@
           <div class="section">
             <div class="section-head">
               <label for="sourcePreview">可编辑预览</label>
-              <button id="openFullscreenPreviewBtn" class="secondary preview-toggle" type="button">全屏左右对照</button>
             </div>
             <div class="editor-grid">
               <div class="editor-stack">
@@ -608,13 +686,25 @@
                 <button id="boldBtn" class="secondary" type="button">加粗</button>
                 <button id="captionBtn" class="secondary" type="button">图片说明</button>
                 <button id="clearHeadingBtn" class="secondary" type="button">清除标题</button>
+                <button id="indentBtn" class="secondary" type="button">首行缩进</button>
+                <button id="mergeTextBtn" class="secondary" type="button">合并文案</button>
+                <button id="clearBtn" class="secondary" type="button">清空全文</button>
               </div>
             </div>
             <p class="helper">这里显示的是可编辑图文预览。你可以直接在预览中选中文本，再点击右侧按钮调整标题、加粗和图片说明。</p>
           </div>
 
-          <div class="section">
-            <label>格式设置</label>
+          <div id="status" class="status">等待输入素材。</div>
+          <div id="syncStatus" class="sync-status">已同步。</div>
+          <p class="helper">
+            当前支持 `.docx` 和 `.pdf`。上传后会先自动识别一级标题、二级标题、正文和图片；如果原文结构非常复杂，仍可能需要你手动微调。
+          </p>
+        </section>
+
+        <section class="output-grid">
+          <section class="card">
+            <h2>格式设置</h2>
+            <p class="helper">修改这里的字号、图片宽高或显示方式后，点击“运行整理”即可把新设置应用到当前可编辑预览内容。</p>
             <div class="settings-grid">
               <label class="setting-item">
                 <span>一级标题字号</span>
@@ -644,24 +734,14 @@
                 </select>
               </label>
             </div>
-          </div>
+            <div class="actions">
+              <button id="runBtn" class="primary">运行整理</button>
+            </div>
+          </section>
 
-          <div class="actions">
-            <button id="runBtn" class="primary">运行整理</button>
-            <button id="clearBtn" class="secondary">清空</button>
-            <button id="indentBtn" class="secondary">首行缩进</button>
-            <button id="mergeTextBtn" class="secondary">合并文案</button>
-          </div>
-
-          <div id="status" class="status">等待输入素材。</div>
-          <p class="helper">
-            Word 文档当前支持 `.docx`。解析时会尽量识别一级标题、二级标题、正文和图片；如果原文不是标准标题样式，可能会按正文处理。
-          </p>
-        </section>
-
-        <section class="output-grid">
           <section class="card">
             <h2>整理结果</h2>
+            <div id="copyStatus" class="copy-status" aria-live="polite"></div>
             <div class="copy-actions">
               <button id="copyMarkdownBtn" class="secondary">复制 Markdown</button>
               <button id="copyHtmlBtn" class="secondary">复制 HTML</button>
@@ -682,13 +762,6 @@
               </div>
             </div>
           </section>
-
-          <section class="card">
-            <h2>预览</h2>
-            <div class="preview-shell">
-              <div id="previewArea"></div>
-            </div>
-          </section>
         </section>
       </section>
     </main>
@@ -698,15 +771,8 @@
         <div class="fullscreen-top">
           <div class="fullscreen-top-main">
             <div>
-            <h2>全屏左右对照</h2>
-            <p>左边继续编辑图文内容，右边同步查看最终预览。</p>
-            </div>
-            <div class="fullscreen-actions">
-              <button id="fullscreenMarkH1Btn" class="secondary" type="button">设为一级标题</button>
-              <button id="fullscreenMarkH2Btn" class="secondary" type="button">设为二级标题</button>
-              <button id="fullscreenBoldBtn" class="secondary" type="button">加粗</button>
-              <button id="fullscreenCaptionBtn" class="secondary" type="button">图片说明</button>
-              <button id="fullscreenClearHeadingBtn" class="secondary" type="button">清除标题</button>
+            <h2>全屏编辑</h2>
+            <p>保留更大的可编辑预览区域，方便你专注修改内容。</p>
             </div>
           </div>
           <button id="closeFullscreenPreviewBtn" class="secondary" type="button">关闭全屏</button>
@@ -716,21 +782,29 @@
             <h3>可编辑预览</h3>
             <div id="fullscreenEditor" class="fullscreen-editor" contenteditable="true"></div>
           </section>
-          <section class="fullscreen-box">
-            <h3>最终预览</h3>
-            <div id="fullscreenPreview" class="fullscreen-preview"></div>
-          </section>
+          <aside class="fullscreen-tools">
+            <h3>快捷操作</h3>
+            <div class="fullscreen-actions">
+              <button id="fullscreenMarkH1Btn" class="secondary" type="button">设为一级标题</button>
+              <button id="fullscreenMarkH2Btn" class="secondary" type="button">设为二级标题</button>
+              <button id="fullscreenBoldBtn" class="secondary" type="button">加粗</button>
+              <button id="fullscreenCaptionBtn" class="secondary" type="button">图片说明</button>
+              <button id="fullscreenIndentBtn" class="secondary" type="button">首行缩进</button>
+              <button id="fullscreenMergeTextBtn" class="secondary" type="button">合并文案</button>
+              <button id="fullscreenClearHeadingBtn" class="secondary" type="button">清除标题</button>
+            </div>
+          </aside>
         </div>
       </div>
     </div>
 
     <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
     <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <script src="https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.min.js"></script>
     <script>
       const docxFile = document.getElementById("docxFile");
       const convertDocxBtn = document.getElementById("convertDocxBtn");
       const stripImagesBtn = document.getElementById("stripImagesBtn");
-      const sampleBtn = document.getElementById("sampleBtn");
       const inputMode = document.getElementById("inputMode");
       const inputText = document.getElementById("inputText");
       const sourcePreview = document.getElementById("sourcePreview");
@@ -753,18 +827,20 @@
       const copyHtmlBtn = document.getElementById("copyHtmlBtn");
       const exportWordBtn = document.getElementById("exportWordBtn");
       const status = document.getElementById("status");
+      const syncStatus = document.getElementById("syncStatus");
+      const copyStatus = document.getElementById("copyStatus");
       const markdownOutput = document.getElementById("markdownOutput");
       const htmlOutput = document.getElementById("htmlOutput");
-      const previewArea = document.getElementById("previewArea");
       const openFullscreenPreviewBtn = document.getElementById("openFullscreenPreviewBtn");
       const closeFullscreenPreviewBtn = document.getElementById("closeFullscreenPreviewBtn");
       const fullscreenShell = document.getElementById("fullscreenShell");
       const fullscreenEditor = document.getElementById("fullscreenEditor");
-      const fullscreenPreview = document.getElementById("fullscreenPreview");
       const fullscreenMarkH1Btn = document.getElementById("fullscreenMarkH1Btn");
       const fullscreenMarkH2Btn = document.getElementById("fullscreenMarkH2Btn");
       const fullscreenBoldBtn = document.getElementById("fullscreenBoldBtn");
       const fullscreenCaptionBtn = document.getElementById("fullscreenCaptionBtn");
+      const fullscreenIndentBtn = document.getElementById("fullscreenIndentBtn");
+      const fullscreenMergeTextBtn = document.getElementById("fullscreenMergeTextBtn");
       const fullscreenClearHeadingBtn = document.getElementById("fullscreenClearHeadingBtn");
 
       const state = {
@@ -777,6 +853,37 @@
       let syncingPreview = false;
       let syncingFullscreen = false;
       let htmlRenderToken = 0;
+      let liveRefreshTimer = null;
+      let copyStatusTimer = null;
+
+      function setSyncStatus(message, tone = "idle") {
+        if (!syncStatus) {
+          return;
+        }
+        syncStatus.textContent = message;
+        syncStatus.classList.remove("is-busy", "is-ready");
+        if (tone === "busy") {
+          syncStatus.classList.add("is-busy");
+        } else if (tone === "ready") {
+          syncStatus.classList.add("is-ready");
+        }
+      }
+
+      function flashCopyStatus(message = "已复制") {
+        if (!copyStatus) {
+          return;
+        }
+        if (copyStatusTimer) {
+          clearTimeout(copyStatusTimer);
+        }
+        copyStatus.textContent = message;
+        copyStatus.classList.add("is-visible");
+        copyStatusTimer = setTimeout(() => {
+          copyStatus.classList.remove("is-visible");
+          copyStatus.textContent = "";
+          copyStatusTimer = null;
+        }, 1600);
+      }
 
       function escapeHtml(text) {
         return text
@@ -831,6 +938,35 @@
         return doc.body.innerHTML.trim();
       }
 
+      function parseInlineFontSize(styleText) {
+        const style = String(styleText || "");
+        const match = style.match(/font-size\s*:\s*([0-9.]+)(px|pt)?/i);
+        if (!match) {
+          return 0;
+        }
+        const value = Number(match[1] || 0);
+        const unit = (match[2] || "px").toLowerCase();
+        if (!value) {
+          return 0;
+        }
+        if (unit === "pt") {
+          return value * 1.3333;
+        }
+        return value;
+      }
+
+      function parseNodeFontSize(node) {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+          return 0;
+        }
+
+        let maxSize = parseInlineFontSize(node.getAttribute("style"));
+        Array.from(node.querySelectorAll?.("*") || []).forEach((child) => {
+          maxSize = Math.max(maxSize, parseInlineFontSize(child.getAttribute("style")));
+        });
+        return maxSize;
+      }
+
       function getSettings() {
         return {
           h1Size: `${Number(h1Size.value || 21)}px`,
@@ -879,6 +1015,105 @@
         );
       }
 
+      function isListLikeParagraph(block) {
+        const text = String(block?.text || "").trim();
+        return (
+          /^[-*•·]\s*/.test(text) ||
+          /^\d+[\.\)）]\s*/.test(text) ||
+          /^\d+[、]\s*/.test(text) ||
+          /^[（(]\d+[）)]\s*/.test(text) ||
+          /^[（(][A-Za-z][）)]\s*/.test(text) ||
+          /^[（(][一二三四五六七八九十百千万]+[）)]\s*/.test(text) ||
+          /^[一二三四五六七八九十百千万]+[、.．)）]\s*/.test(text) ||
+          /^[A-Za-z][\.\)）]\s*/.test(text)
+        );
+      }
+
+      function isColonLeadParagraph(block) {
+        const text = String(block?.text || "").trim();
+        return block && block.type === "p" && /[:：]$/.test(text);
+      }
+
+      function isPotentialListEntryText(text) {
+        const trimmed = String(text || "").trim();
+        if (!trimmed) {
+          return false;
+        }
+        if (isListLikeParagraph({ type: "p", text: trimmed })) {
+          return true;
+        }
+
+        const noSentenceEnd = !/[。！？!?]/.test(trimmed);
+        const shortEntry = trimmed.length <= 36;
+        const mediumEntry = trimmed.length <= 60;
+        const endsLikeEntry = /[；;：:]$/.test(trimmed);
+
+        return (shortEntry && noSentenceEnd) || (mediumEntry && endsLikeEntry);
+      }
+
+      function isContextualListEntry(blocks, index) {
+        const block = blocks[index];
+        const text = String(block?.text || "").trim();
+        if (!block || block.type !== "p" || !text) {
+          return false;
+        }
+        if (isListLikeParagraph(block)) {
+          return true;
+        }
+
+        const prev = blocks[index - 1];
+        if (isColonLeadParagraph(prev) && isPotentialListEntryText(text)) {
+          return true;
+        }
+
+        const prevText = String(prev?.text || "").trim();
+        if (isPotentialListEntryText(prevText) && isPotentialListEntryText(text)) {
+          return true;
+        }
+
+        return false;
+      }
+
+      function isMetricListLikeText(text) {
+        const trimmed = normalizeHeadingText(text);
+        if (!trimmed) {
+          return false;
+        }
+
+        const hasValueTail =
+          /[:：]\s*[<>~≈]?\s*\d+(?:\.\d+)?\s*(?:%|x|X|k|K|m|M|b|B|倍|项|次|分)?$/.test(trimmed) ||
+          /[:：]\s*[A-Za-z0-9.-]+$/.test(trimmed);
+        const modelishLead = /[A-Za-z0-9][A-Za-z0-9+_.\- ]{4,}/.test(trimmed);
+        return hasValueTail && modelishLead && !/[。！？!?；;]$/.test(trimmed);
+      }
+
+      function isLikelyMetricListEntry(blocks, index) {
+        const block = blocks[index];
+        const text = normalizeHeadingText(block?.text || "");
+        if (!block || block.type !== "p" || !text) {
+          return false;
+        }
+
+        if (!isMetricListLikeText(text)) {
+          return false;
+        }
+
+        let similarNeighbors = 0;
+        const prev = blocks[index - 1];
+        const next = blocks[index + 1];
+        const prevText = normalizeHeadingText(prev?.text || "");
+        const nextText = normalizeHeadingText(next?.text || "");
+
+        if (isMetricListLikeText(prevText)) {
+          similarNeighbors += 1;
+        }
+        if (isMetricListLikeText(nextText)) {
+          similarNeighbors += 1;
+        }
+
+        return similarNeighbors > 0;
+      }
+
       function isMergeableBodyParagraph(block) {
         const text = String(block?.text || "").trim();
         return (
@@ -886,7 +1121,8 @@
           block.type === "p" &&
           text &&
           !text.startsWith("【图片") &&
-          !isCaptionLikeParagraph(block)
+          !isCaptionLikeParagraph(block) &&
+          !isListLikeParagraph(block)
         );
       }
 
@@ -947,6 +1183,7 @@
             type: "h1",
             text: node.textContent.trim(),
             html: sanitizeRichTextHtml(node.innerHTML.trim()),
+            fontSize: parseNodeFontSize(node),
           });
           return;
         }
@@ -956,6 +1193,7 @@
             type: "h2",
             text: node.textContent.trim(),
             html: sanitizeRichTextHtml(node.innerHTML.trim()),
+            fontSize: parseNodeFontSize(node),
           });
           return;
         }
@@ -999,7 +1237,12 @@
           );
           const text = htmlToPlainText(richHtml);
           if (text) {
-            blocks.push({ type: "p", text, html: richHtml });
+            blocks.push({
+              type: "p",
+              text,
+              html: richHtml,
+              fontSize: parseNodeFontSize(node),
+            });
           }
 
           Array.from(node.children).forEach((child) => {
@@ -1138,7 +1381,8 @@
           syncFullscreenPanels();
           return;
         }
-        const blocks = normalizeBlocks(raw, detectMode(raw));
+        const mode = detectMode(raw);
+        const blocks = normalizeAndDetectBlocks(raw, mode);
         sourcePreview.innerHTML = blocksToEditableHtml(blocks);
         syncFullscreenPanels();
       }
@@ -1152,6 +1396,7 @@
         inputText.value = sourcePreview.innerHTML.trim();
         syncingPreview = false;
         syncFullscreenPanels();
+        scheduleLiveRefresh();
       }
 
       function syncInputFromFullscreen() {
@@ -1160,16 +1405,78 @@
         inputMode.value = "html";
         inputText.value = sourcePreview.innerHTML.trim();
         syncingFullscreen = false;
+        scheduleLiveRefresh();
+      }
+
+      function syncCurrentEditableToInput() {
+        const activeFullscreen =
+          fullscreenShell.classList.contains("is-open") &&
+          fullscreenEditor &&
+          document.activeElement === fullscreenEditor;
+        const rawHtml = activeFullscreen
+          ? fullscreenEditor.innerHTML.trim()
+          : sourcePreview.innerHTML.trim() || inputText.value.trim();
+
+        inputMode.value = "html";
+        inputText.value = rawHtml;
+
+        if (!activeFullscreen && fullscreenEditor && document.activeElement !== fullscreenEditor) {
+          fullscreenEditor.innerHTML = sourcePreview.innerHTML;
+        }
+
+        return rawHtml;
+      }
+
+      function getCurrentBlocksFromEditable() {
+        const rawHtml = syncCurrentEditableToInput();
+        if (!rawHtml) {
+          return [];
+        }
+        return normalizeAndDetectBlocks(rawHtml, "html");
+      }
+
+      function syncIndentButtons() {
+        indentBtn.classList.toggle("primary", state.indentFirstLine);
+        indentBtn.classList.toggle("secondary", !state.indentFirstLine);
+        if (fullscreenIndentBtn) {
+          fullscreenIndentBtn.classList.toggle("primary", state.indentFirstLine);
+          fullscreenIndentBtn.classList.toggle("secondary", !state.indentFirstLine);
+        }
       }
 
       function syncFullscreenPanels() {
-        if (!fullscreenEditor || !fullscreenPreview) {
+        if (!fullscreenEditor) {
           return;
         }
         if (document.activeElement !== fullscreenEditor) {
           fullscreenEditor.innerHTML = sourcePreview.innerHTML;
         }
-        fullscreenPreview.innerHTML = previewArea.innerHTML;
+      }
+
+      function scheduleLiveRefresh() {
+        if (liveRefreshTimer) {
+          clearTimeout(liveRefreshTimer);
+        }
+        setSyncStatus("正在同步编辑内容...", "busy");
+        liveRefreshTimer = setTimeout(async () => {
+          liveRefreshTimer = null;
+          const rawHtml = syncCurrentEditableToInput();
+          if (!rawHtml) {
+            markdownOutput.textContent = "";
+            if (htmlOutput) {
+              htmlOutput.textContent = "";
+            }
+            state.markdown = "";
+            state.htmlRaw = "";
+            state.html = "";
+            state.htmlLegacy = "";
+            setSyncStatus("已清空，等待输入。");
+            return;
+          }
+          const blocks = getCurrentBlocksFromEditable();
+          await renderOutputs(blocks, { live: true });
+          setSyncStatus("已同步到 Markdown / HTML。", "ready");
+        }, 260);
       }
 
       function openFullscreenPreview() {
@@ -1377,6 +1684,17 @@
         return textToBlocks(raw);
       }
 
+      function normalizeAndDetectBlocks(raw, mode) {
+        const blocks = normalizeBlocks(raw, mode);
+        if (!blocks.length) {
+          return blocks;
+        }
+        if (mode === "markdown") {
+          return blocks;
+        }
+        return detectDefaultStructure(blocks);
+      }
+
       function blocksToPlainText(blocks) {
         return blocks
           .map((block) => {
@@ -1492,6 +1810,391 @@
 </html>`;
       }
 
+      function normalizeHeadingText(text) {
+        return String(text || "").replace(/\s+/g, " ").trim();
+      }
+
+      function hasHeadingMarker(text) {
+        const normalized = normalizeHeadingText(text);
+        return /^(?:\d+[\)）.．、]|[（(]\d+[)）]|[A-Za-z][\)）.．、]|[（(][A-Za-z][)）]|[一二三四五六七八九十百千万]+[、.．:：]|[（(][一二三四五六七八九十百千万]+[)）])/.test(normalized);
+      }
+
+      function isEmphasizedHeadingHtml(htmlText) {
+        const html = String(htmlText || "").trim();
+        if (!html) {
+          return false;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+        const root = doc.body.firstElementChild;
+        if (!root) {
+          return false;
+        }
+
+        const textNodes = [];
+        const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const text = String(walker.currentNode.textContent || "").trim();
+          if (text) {
+            textNodes.push(walker.currentNode);
+          }
+        }
+
+        if (!textNodes.length) {
+          return false;
+        }
+
+        return textNodes.every((node) => {
+          let current = node.parentElement;
+          while (current && current !== root.parentElement) {
+            if (["STRONG", "B"].includes(current.tagName)) {
+              return true;
+            }
+            current = current.parentElement;
+          }
+          return false;
+        });
+      }
+
+      function looksLikeStandaloneHeading(text, options = {}) {
+        const normalized = normalizeHeadingText(text);
+        const allowExtendedLength = Boolean(options.allowExtendedLength);
+        if (!normalized) {
+          return false;
+        }
+        if (normalized.length > (allowExtendedLength ? 60 : 34)) {
+          return false;
+        }
+        if (/[。；;]/.test(normalized)) {
+          return false;
+        }
+        const withoutTerminalQuestion = normalized.replace(/[！？!?]+$/, "");
+        if (/[！？!?]/.test(withoutTerminalQuestion)) {
+          return false;
+        }
+        if (/[:：]$/.test(normalized)) {
+          return false;
+        }
+        return true;
+      }
+
+      function isLikelyCaptionText(text) {
+        const normalized = normalizeHeadingText(text);
+        if (!normalized) {
+          return false;
+        }
+
+        return (
+          /^(图|表|附图|Figure|Table|Fig\.?)\s*\d*/i.test(normalized) ||
+          /(示意图|框架图|结果图|对比图|配置图|流程图|结构图|系统图|实验设置|硬件配置|软件配置)/.test(normalized)
+        );
+      }
+
+      function hasSentenceLikePunctuation(text) {
+        return /[。！？!?]/.test(String(text || ""));
+      }
+
+      function isLikelySectionHeadingText(text) {
+        const normalized = normalizeHeadingText(text);
+        if (!normalized) {
+          return false;
+        }
+        if (isLikelyCaptionText(normalized)) {
+          return false;
+        }
+        if (/[：:]$/.test(normalized)) {
+          return false;
+        }
+        if (hasSentenceLikePunctuation(normalized)) {
+          return false;
+        }
+        return (
+          normalized.length <= 28 ||
+          hasHeadingMarker(normalized)
+        );
+      }
+
+      function isNumberedHeadingCandidate(text) {
+        const normalized = normalizeHeadingText(text);
+        if (!normalized) {
+          return false;
+        }
+        if (!hasHeadingMarker(normalized)) {
+          return false;
+        }
+        if (/[。！？!?；;]$/.test(normalized)) {
+          return false;
+        }
+        return normalized.length <= 60;
+      }
+
+      function isColonHeadingCandidate(text) {
+        const normalized = normalizeHeadingText(text);
+        if (!normalized) {
+          return false;
+        }
+        if (!/[：:]/.test(normalized) || /[:：]$/.test(normalized)) {
+          return false;
+        }
+        if (hasSentenceLikePunctuation(normalized)) {
+          return false;
+        }
+        return normalized.length <= 60;
+      }
+
+      function isOrdinalSubsectionHeading(text) {
+        const normalized = normalizeHeadingText(text);
+        if (!normalized) {
+          return false;
+        }
+
+        return /^[^\u4e00-\u9fa5A-Za-z0-9]*\s*(核心发现|关键发现|主要发现|发现|启示|结论|观察|问题|要点|重点)\s*[一二三四五六七八九十0-9]+[:：]/.test(normalized);
+      }
+
+      function isTableLikeParagraph(block) {
+        const text = normalizeHeadingText(block?.text || "");
+        if (!text || block?.type !== "p") {
+          return false;
+        }
+        return (
+          /(Component|Specification|Configuration|Operating System|Container Engine)/i.test(text) ||
+          /(硬件配置|软件配置|参数|指标|规格|组件|配置项)/.test(text)
+        );
+      }
+
+      function isNearTableLikeContent(blocks, index) {
+        for (let offset = 1; offset <= 3; offset += 1) {
+          if (isTableLikeParagraph(blocks[index - offset]) || isTableLikeParagraph(blocks[index + offset])) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function isLikelyCaptionByContext(blocks, index, fontStats = summarizeFontSizes(blocks)) {
+        const block = blocks[index];
+        const text = normalizeHeadingText(block?.text || "");
+        const prev = blocks[index - 1];
+        const next = blocks[index + 1];
+        const nearImage = prev?.type === "img" || next?.type === "img";
+        const nearTable = isNearTableLikeContent(blocks, index);
+        const nearMedia = nearImage || nearTable;
+        const captionLikeText = isLikelyCaptionText(text);
+        const shortText = text.length <= 34;
+        const compactLine = text.length <= 42 && !/[，,]/.test(text);
+        const noSentenceEnd = !hasSentenceLikePunctuation(text);
+        const fontSize = Number(block?.fontSize || 0);
+        const smallishFont = !fontSize || fontSize <= Math.max(fontStats.body + 2, fontStats.second - 2);
+        const headingLike = isLikelySectionHeadingText(text) && fontSize >= Math.max(fontStats.second, fontStats.body + 4);
+
+        if (captionLikeText && nearMedia) {
+          return true;
+        }
+
+        if (!nearMedia) {
+          return false;
+        }
+
+        if (headingLike) {
+          return false;
+        }
+
+        if (!nearImage) {
+          return false;
+        }
+
+        return shortText && compactLine && noSentenceEnd && smallishFont;
+      }
+
+      function summarizeFontSizes(blocks) {
+        const sizes = blocks
+          .filter((block) => block?.type === "p")
+          .map((block) => Number(block.fontSize || 0))
+          .filter((size) => size > 0)
+          .sort((a, b) => b - a);
+
+        const unique = [...new Set(sizes.map((size) => Math.round(size * 10) / 10))];
+        return {
+          max: unique[0] || 0,
+          second: unique[1] || unique[0] || 0,
+          body: unique[unique.length - 1] || 0,
+        };
+      }
+
+      function detectDefaultStructure(blocks) {
+        const fontStats = summarizeFontSizes(blocks);
+
+        return blocks.map((block, index) => {
+          if (!block) {
+            return block;
+          }
+
+          // Keep explicit heading tags chosen by the user or already parsed from HTML.
+          if (block.type === "h1" || block.type === "h2") {
+            return block;
+          }
+
+          if (block.type !== "p") {
+            return block;
+          }
+
+          const text = normalizeHeadingText(block.text);
+          const emphasized = isEmphasizedHeadingHtml(block.html);
+          const numberedHeading = isNumberedHeadingCandidate(text);
+          const colonHeading = isColonHeadingCandidate(text);
+          const ordinalSubsectionHeading = isOrdinalSubsectionHeading(text);
+          const extendedHeading = emphasized || numberedHeading || colonHeading;
+
+          if (!looksLikeStandaloneHeading(text, { allowExtendedLength: extendedHeading })) {
+            return block;
+          }
+
+          const fontSize = Number(block.fontSize || 0);
+          const prev = blocks[index - 1];
+          const prevText = normalizeHeadingText(prev?.text || "");
+          const next = blocks[index + 1];
+          const captionLike = isLikelyCaptionByContext(blocks, index, fontStats);
+          const metricListLike = isLikelyMetricListEntry(blocks, index) || isContextualListEntry(blocks, index);
+          const isTopFontTier =
+            fontSize > 0 &&
+            (
+              fontSize >= fontStats.max - 0.8 ||
+              (fontStats.max > 0 && fontSize >= fontStats.max * 0.94)
+            );
+
+          if (captionLike) {
+            return {
+              ...block,
+              type: "caption",
+              html: block.html || sanitizeRichTextHtml(escapeHtml(text)),
+            };
+          }
+
+          const likelySectionTitle =
+            text.length <= 18 ||
+            emphasized ||
+            numberedHeading ||
+            colonHeading ||
+            fontSize >= Math.max(20, fontStats.second) ||
+            hasHeadingMarker(text);
+
+          if (
+            !captionLike &&
+            !metricListLike &&
+            !ordinalSubsectionHeading &&
+            (
+              (isTopFontTier && text.length <= 36) ||
+              (emphasized && text.length <= 40 && !numberedHeading)
+            ) &&
+            !/[:：]$/.test(text)
+          ) {
+            return {
+              ...block,
+              type: "h1",
+              html: block.html || sanitizeRichTextHtml(escapeHtml(text)),
+            };
+          }
+
+          if (
+            !captionLike &&
+            !metricListLike &&
+            likelySectionTitle &&
+            !/[:：]$/.test(prevText) &&
+            text.length <= (extendedHeading ? 60 : 28) &&
+            next?.type !== "img"
+          ) {
+            return {
+              ...block,
+              type: "h2",
+              html: block.html || sanitizeRichTextHtml(escapeHtml(text)),
+            };
+          }
+
+          return block;
+        });
+      }
+
+      function escapeAttribute(value) {
+        return escapeHtml(String(value || ""));
+      }
+
+      async function parsePdfDocument(file) {
+        const pdfjs = globalThis.pdfjsLib;
+        if (!pdfjs) {
+          throw new Error("当前环境还没有加载 PDF 解析组件，请稍后再试。");
+        }
+
+        pdfjs.GlobalWorkerOptions.workerSrc =
+          "https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js";
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        const blocks = [];
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const textContent = await page.getTextContent();
+          const lineMap = new Map();
+
+          textContent.items.forEach((item) => {
+            const y = Math.round((item.transform?.[5] || 0) / 4) * 4;
+            const x = item.transform?.[4] || 0;
+            const fontSize = Math.abs(item.transform?.[0] || item.height || 0);
+            const text = String(item.str || "").trim();
+            if (!text) {
+              return;
+            }
+            if (!lineMap.has(y)) {
+              lineMap.set(y, []);
+            }
+            lineMap.get(y).push({ text, x, fontSize });
+          });
+
+          const lines = Array.from(lineMap.entries())
+            .sort((a, b) => b[0] - a[0])
+            .map(([, items]) => {
+              const ordered = items.sort((a, b) => a.x - b.x);
+              const text = ordered.map((item) => item.text).join(" ").replace(/\s+/g, " ").trim();
+              const fontSize = Math.max(...ordered.map((item) => item.fontSize || 0));
+              return { text, fontSize };
+            })
+            .filter((line) => line.text);
+
+          lines.forEach((line) => {
+            blocks.push({
+              type: "p",
+              text: line.text,
+              html: sanitizeRichTextHtml(escapeHtml(line.text)),
+              fontSize: line.fontSize,
+            });
+          });
+
+          const viewport = page.getViewport({ scale: 1.4 });
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          if (context) {
+            await page.render({
+              canvasContext: context,
+              viewport,
+            }).promise;
+
+            blocks.push({
+              type: "img",
+              src: canvas.toDataURL("image/png"),
+              alt: `PDF 第 ${pageNumber} 页`,
+              width: Math.round(viewport.width),
+              height: Math.round(viewport.height),
+            });
+          }
+        }
+
+        return detectDefaultStructure(blocks);
+      }
+
       function normalizeImageSource(src) {
         const raw = String(src || "").trim();
         if (!raw) {
@@ -1605,7 +2308,8 @@
         );
       }
 
-      async function renderOutputs(blocks) {
+      async function renderOutputs(blocks, options = {}) {
+        const live = Boolean(options.live);
         const settings = getSettings();
         state.markdown = blocksToMarkdown(blocks);
         state.htmlRaw = blocksToHtml(blocks, settings);
@@ -1617,8 +2321,11 @@
         if (htmlOutput) {
           htmlOutput.textContent = getDisplayHtml(state.htmlRaw);
         }
-        previewArea.innerHTML = state.htmlRaw;
         syncFullscreenPanels();
+
+        if (live) {
+          return;
+        }
 
         const externalHtml = await inlineHtmlImages(state.htmlRaw);
         if (token !== htmlRenderToken) {
@@ -1634,13 +2341,11 @@
       }
 
       async function replaceImagesWithPlaceholders() {
-        const raw = inputText.value.trim();
-        if (!raw) {
+        const blocks = getCurrentBlocksFromEditable();
+        if (!blocks.length) {
           status.textContent = "请先上传 Word 或输入内容。";
           return;
         }
-
-        const blocks = normalizeBlocks(raw, detectMode(raw));
         let imageIndex = 0;
         const replacedBlocks = blocks.map((block) => {
           if (block.type !== "img") {
@@ -1671,14 +2376,30 @@
       function mergeAdjacentCopy(blocks) {
         const merged = [];
         const maxParagraphLength = 300;
+        const protectedIndexes = new Set();
 
-        for (const block of blocks) {
+        for (let index = 0; index < blocks.length; index += 1) {
+          if (isContextualListEntry(blocks, index) || isColonLeadParagraph(blocks[index])) {
+            protectedIndexes.add(index);
+            if (index > 0) {
+              protectedIndexes.add(index - 1);
+            }
+            if (index < blocks.length - 1) {
+              protectedIndexes.add(index + 1);
+            }
+          }
+        }
+
+        for (let index = 0; index < blocks.length; index += 1) {
+          const block = blocks[index];
           const prev = merged[merged.length - 1];
           const nextLength =
             String(prev?.text || "").length + String(block.text || "").length;
           const canMerge =
             isMergeableBodyParagraph(prev) &&
             isMergeableBodyParagraph(block) &&
+            !protectedIndexes.has(index) &&
+            !prev?.__protected &&
             nextLength <= maxParagraphLength;
 
           if (canMerge) {
@@ -1687,26 +2408,30 @@
             continue;
           }
 
-          merged.push({ ...block });
+          merged.push({
+            ...block,
+            __protected: protectedIndexes.has(index),
+          });
         }
 
-        return merged;
+        return merged.map(({ __protected, ...block }) => block);
       }
 
       async function toggleFirstLineIndent() {
         state.indentFirstLine = !state.indentFirstLine;
-        indentBtn.classList.toggle("primary", state.indentFirstLine);
-        indentBtn.classList.toggle("secondary", !state.indentFirstLine);
-
-        const raw = inputText.value.trim();
-        if (!raw) {
+        syncIndentButtons();
+        const rawHtml = syncCurrentEditableToInput();
+        if (!rawHtml) {
           status.textContent = state.indentFirstLine
             ? "已开启首行缩进。"
             : "已关闭首行缩进。";
           return;
         }
-
-        const blocks = normalizeBlocks(raw, detectMode(raw));
+        status.textContent = state.indentFirstLine
+          ? "正在应用首行缩进..."
+          : "正在取消首行缩进...";
+        syncPreviewFromInput();
+        const blocks = getCurrentBlocksFromEditable();
         await renderOutputs(blocks);
         status.textContent = state.indentFirstLine
           ? "已开启首行缩进，每段首行缩进两个字符。"
@@ -1714,13 +2439,11 @@
       }
 
       async function mergeCopywriting() {
-        const raw = inputText.value.trim();
-        if (!raw) {
+        const blocks = getCurrentBlocksFromEditable();
+        if (!blocks.length) {
           status.textContent = "请先输入原始素材。";
           return;
         }
-
-        const blocks = normalizeBlocks(raw, detectMode(raw));
         const mergedBlocks = mergeAdjacentCopy(blocks);
         inputMode.value = "html";
         inputText.value = blocksToHtml(mergedBlocks, getSettings());
@@ -1730,37 +2453,38 @@
       }
 
       async function runFormatting() {
-        const raw = inputText.value.trim();
-        if (!raw) {
+        const blocks = getCurrentBlocksFromEditable();
+        if (!blocks.length) {
           status.textContent = "请先输入原始素材，或者先上传 Word。";
           return;
         }
 
-        const blocks = normalizeBlocks(raw, detectMode(raw));
-        if (!blocks.length) {
-          status.textContent = "没有识别到可整理的内容。";
-          return;
-        }
-
         status.textContent = "正在生成可外发 HTML，请稍候...";
+        setSyncStatus("正在执行完整整理...", "busy");
+        syncPreviewFromInput();
         await renderOutputs(blocks);
         status.textContent = "整理完成。HTML 中的本地图片已自动转成可外部渲染的内嵌格式。";
+        setSyncStatus("已完成完整整理。", "ready");
       }
 
       async function convertDocx() {
         const [file] = docxFile.files || [];
         if (!file) {
-          status.textContent = "请先选择一个 .docx 文件。";
+          status.textContent = "请先选择一个 .docx 或 .pdf 文件。";
           return;
         }
 
-        status.textContent = "正在解析 Word 文档，请稍候...";
+        status.textContent = "正在解析文档，请稍候...";
         convertDocxBtn.disabled = true;
 
         try {
+          let blocks = [];
           let formattedHtml = "";
 
-          if (window.mammoth) {
+          if (file.name.toLowerCase().endsWith(".pdf")) {
+            blocks = await parsePdfDocument(file);
+            formattedHtml = blocksToHtml(blocks, getSettings());
+          } else if (window.mammoth) {
             const arrayBuffer = await file.arrayBuffer();
             const result = await window.mammoth.convertToHtml(
               { arrayBuffer },
@@ -1774,6 +2498,7 @@
               }
             );
             formattedHtml = result.value || "";
+            blocks = detectDefaultStructure(normalizeBlocks(formattedHtml, "html"));
           } else {
             const formData = new FormData();
             formData.append("file", file);
@@ -1789,14 +2514,14 @@
             }
 
             formattedHtml = payload.formattedHtml || "";
+            blocks = detectDefaultStructure(normalizeBlocks(formattedHtml, "html"));
           }
 
           inputMode.value = "html";
-          inputText.value = formattedHtml;
-          const blocks = normalizeBlocks(formattedHtml, "html");
+          inputText.value = blocksToHtml(blocks, getSettings());
           syncPreviewFromInput();
           await renderOutputs(blocks);
-          status.textContent = `Word 解析完成：${file.name}，已生成可继续编辑的图文内容。`;
+          status.textContent = `文档解析完成：${file.name}，已自动识别默认标题和图文内容。`;
         } catch (error) {
           status.textContent = error.message || "Word 解析失败。";
         } finally {
@@ -1812,6 +2537,7 @@
         try {
           await navigator.clipboard.writeText(content);
           status.textContent = successMessage;
+          flashCopyStatus("已复制");
         } catch (error) {
           status.textContent = "复制失败，请手动复制。";
         }
@@ -1864,14 +2590,6 @@
         status.textContent = "DOCX 文档开始下载。";
       }
 
-      function fillSample() {
-        inputMode.value = "markdown";
-        inputText.value =
-          "# 上海创智学院发布春季论坛活动预告\n\n## 活动亮点\n\n本次论坛将围绕人工智能、数字传播和青年创新创业展开分享。\n\n![活动主视觉](https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80)\n\n## 报名方式\n\n读者可通过学院官方公众号和网站报名参加。";
-        syncPreviewFromInput();
-        status.textContent = "示例内容已填入。";
-      }
-
       function clearAll() {
         docxFile.value = "";
         inputText.value = "";
@@ -1880,37 +2598,43 @@
         if (htmlOutput) {
           htmlOutput.textContent = "";
         }
-        previewArea.innerHTML = "";
         syncFullscreenPanels();
         state.indentFirstLine = false;
-        indentBtn.classList.remove("primary");
-        indentBtn.classList.add("secondary");
+        syncIndentButtons();
         state.markdown = "";
         state.htmlRaw = "";
         state.html = "";
         state.htmlLegacy = "";
         status.textContent = "内容已清空。";
+        setSyncStatus("已清空，等待输入。");
+      }
+
+      function markSettingsPending() {
+        setSyncStatus("格式设置已修改，点击“运行整理”后生效。");
       }
 
       async function refreshCurrentOutputs() {
-        syncPreviewFromInput();
-        const raw = inputText.value.trim();
-        if (!raw) {
+        const rawHtml = syncCurrentEditableToInput();
+        if (!rawHtml) {
           return;
         }
-        const blocks = normalizeBlocks(raw, detectMode(raw));
+        syncPreviewFromInput();
+        const blocks = getCurrentBlocksFromEditable();
         await renderOutputs(blocks);
       }
 
       inputText.addEventListener("input", syncPreviewFromInput);
+      inputText.addEventListener("input", scheduleLiveRefresh);
       sourcePreview.addEventListener("input", syncInputFromPreview);
       fullscreenEditor.addEventListener("input", syncInputFromFullscreen);
-      h1Size.addEventListener("input", refreshCurrentOutputs);
-      h2Size.addEventListener("input", refreshCurrentOutputs);
-      bodySize.addEventListener("input", refreshCurrentOutputs);
+      h1Size.addEventListener("input", markSettingsPending);
+      h2Size.addEventListener("input", markSettingsPending);
+      bodySize.addEventListener("input", markSettingsPending);
+      imageWidth.addEventListener("input", markSettingsPending);
+      imageHeight.addEventListener("input", markSettingsPending);
+      imageFit.addEventListener("change", markSettingsPending);
       convertDocxBtn.addEventListener("click", convertDocx);
       stripImagesBtn.addEventListener("click", replaceImagesWithPlaceholders);
-      sampleBtn.addEventListener("click", fillSample);
       runBtn.addEventListener("click", runFormatting);
       clearBtn.addEventListener("click", clearAll);
       indentBtn.addEventListener("click", toggleFirstLineIndent);
@@ -1924,13 +2648,17 @@
       fullscreenMarkH2Btn.addEventListener("click", () => applyHeadingMarker(2));
       fullscreenBoldBtn.addEventListener("click", applyBold);
       fullscreenCaptionBtn.addEventListener("click", applyCaption);
+      fullscreenIndentBtn.addEventListener("click", toggleFirstLineIndent);
+      fullscreenMergeTextBtn.addEventListener("click", mergeCopywriting);
       fullscreenClearHeadingBtn.addEventListener("click", () => applyHeadingMarker(0));
       copyMarkdownBtn.addEventListener("click", () =>
         copyText(state.markdown, "Markdown 已复制。")
       );
-      copyHtmlBtn.addEventListener("click", () =>
-        copyText(state.htmlLegacy || state.html, "HTML 已复制，已按旧版编辑器更易识别的图片格式输出。")
-      );
+      copyHtmlBtn.addEventListener("click", () => {
+        const legacyHtml = formatHtmlForLegacyEditors(state.html || state.htmlRaw);
+        state.htmlLegacy = legacyHtml;
+        copyText(legacyHtml, "HTML 已复制，已按旧版编辑器更易识别的图片格式输出。");
+      });
       exportWordBtn.addEventListener("click", exportWordDocument);
       openFullscreenPreviewBtn.addEventListener("click", openFullscreenPreview);
       closeFullscreenPreviewBtn.addEventListener("click", closeFullscreenPreview);
@@ -1944,6 +2672,8 @@
           closeFullscreenPreview();
         }
       });
+      syncIndentButtons();
+      setSyncStatus("已同步。", "ready");
       syncPreviewFromInput();
     </script>
   </body>
