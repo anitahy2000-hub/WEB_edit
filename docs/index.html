@@ -228,7 +228,7 @@
 
       .upload-actions {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 12px;
         margin-top: 16px;
       }
@@ -650,9 +650,19 @@
             <input id="docxFile" class="upload-box" type="file" accept=".docx,.pdf,application/pdf" />
           </div>
 
+          <div class="section">
+            <label for="wechatUrl">导入微信公众号文章链接</label>
+            <input
+              id="wechatUrl"
+              type="url"
+              placeholder="粘贴公众号文章链接，例如 https://mp.weixin.qq.com/s/..."
+            />
+          </div>
+
           <div class="upload-actions">
             <button id="convertDocxBtn" class="secondary">解析文档</button>
             <button id="stripImagesBtn" class="secondary">图片转占位</button>
+            <button id="importWechatBtn" class="secondary">导入公众号文章</button>
             <button id="openFullscreenPreviewBtn" class="secondary preview-toggle" type="button">全屏编辑</button>
           </div>
 
@@ -803,8 +813,10 @@
     <script src="https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.min.js"></script>
     <script>
       const docxFile = document.getElementById("docxFile");
+      const wechatUrl = document.getElementById("wechatUrl");
       const convertDocxBtn = document.getElementById("convertDocxBtn");
       const stripImagesBtn = document.getElementById("stripImagesBtn");
+      const importWechatBtn = document.getElementById("importWechatBtn");
       const inputMode = document.getElementById("inputMode");
       const inputText = document.getElementById("inputText");
       const sourcePreview = document.getElementById("sourcePreview");
@@ -2529,6 +2541,47 @@
         }
       }
 
+      async function importWechatArticle() {
+        const url = wechatUrl.value.trim();
+        if (!url) {
+          status.textContent = "请先粘贴公众号文章链接。";
+          return;
+        }
+
+        status.textContent = "正在导入公众号文章，请稍候...";
+        setSyncStatus("正在抓取公众号文章...", "busy");
+        importWechatBtn.disabled = true;
+
+        try {
+          const response = await fetch("/api/import-wechat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url }),
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || "公众号文章导入失败。");
+          }
+
+          const formattedHtml = payload.formattedHtml || "";
+          const blocks = normalizeAndDetectBlocks(formattedHtml, "html");
+          inputMode.value = "html";
+          inputText.value = blocksToHtml(blocks, getSettings());
+          syncPreviewFromInput();
+          await renderOutputs(blocks);
+          status.textContent = `公众号文章导入完成：${payload.title || "未命名文章"}`;
+          setSyncStatus("已同步公众号文章内容。", "ready");
+        } catch (error) {
+          status.textContent = error.message || "公众号文章导入失败。";
+          setSyncStatus("公众号文章导入失败。");
+        } finally {
+          importWechatBtn.disabled = false;
+        }
+      }
+
       async function copyText(content, successMessage) {
         if (!content.trim()) {
           status.textContent = "当前没有可复制内容。";
@@ -2635,6 +2688,7 @@
       imageFit.addEventListener("change", markSettingsPending);
       convertDocxBtn.addEventListener("click", convertDocx);
       stripImagesBtn.addEventListener("click", replaceImagesWithPlaceholders);
+      importWechatBtn.addEventListener("click", importWechatArticle);
       runBtn.addEventListener("click", runFormatting);
       clearBtn.addEventListener("click", clearAll);
       indentBtn.addEventListener("click", toggleFirstLineIndent);
