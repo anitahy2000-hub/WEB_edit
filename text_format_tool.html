@@ -2479,6 +2479,38 @@
         setSyncStatus("已完成完整整理。", "ready");
       }
 
+      function isGithubPagesHost() {
+        return window.location.hostname.endsWith("github.io");
+      }
+
+      async function readJsonResponse(response, fallbackMessage) {
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+
+        if (contentType.includes("application/json")) {
+          return response.json();
+        }
+
+        const responseText = await response.text();
+        if (
+          responseText.trim().startsWith("{") ||
+          responseText.trim().startsWith("[")
+        ) {
+          try {
+            return JSON.parse(responseText);
+          } catch (error) {
+            // Ignore parse failure and show a clearer message below.
+          }
+        }
+
+        if (isGithubPagesHost()) {
+          throw new Error(
+            "GitHub Pages 只支持静态网页，这里的公众号导入和部分文档解析功能需要本地运行 serve_site.py。"
+          );
+        }
+
+        throw new Error(fallbackMessage);
+      }
+
       async function convertDocx() {
         const [file] = docxFile.files || [];
         if (!file) {
@@ -2519,7 +2551,10 @@
               method: "POST",
               body: formData,
             });
-            const payload = await response.json();
+            const payload = await readJsonResponse(
+              response,
+              "文档解析服务暂时不可用。"
+            );
 
             if (!response.ok) {
               throw new Error(payload.error || "解析失败");
@@ -2560,7 +2595,10 @@
             },
             body: JSON.stringify({ url }),
           });
-          const payload = await response.json();
+          const payload = await readJsonResponse(
+            response,
+            "公众号导入服务暂时不可用。"
+          );
 
           if (!response.ok) {
             throw new Error(payload.error || "公众号文章导入失败。");

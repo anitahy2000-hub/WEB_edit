@@ -7,7 +7,9 @@ from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from io import BytesIO
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin, parse_qs, quote
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 import base64
 import argparse
 import html
@@ -118,6 +120,246 @@ def html_to_markdown_text(html_text: str) -> str:
     text = re.sub(r"</?(em|i)>", "*", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", "", text)
     return html.unescape(normalize_whitespace(text))
+
+
+def is_wechat_article_url(url: str) -> bool:
+    parsed = urlparse(url.strip())
+    host = (parsed.netloc or "").lower()
+    return parsed.scheme in {"http", "https"} and (
+        "mp.weixin.qq.com" in host or "weixin.qq.com" in host
+    )
+
+
+def normalize_remote_url(raw_url: str, referer_url: str) -> str:
+    cleaned = html.unescape(raw_url.strip())
+    if not cleaned:
+        return ""
+    if cleaned.startswith("//"):
+        return f"https:{cleaned}"
+    return urljoin(referer_url, cleaned)
+
+
+def build_proxy_image_url(image_url: str, referer_url: str) -> str:
+    normalized_url = normalize_remote_url(image_url, referer_url)
+    return (
+        "/api/proxy-image"
+        f"?src={quote(normalized_url, safe='')}"
+        f"&referer={quote(referer_url, safe='')}"
+    )
+
+
+def fetch_remote_image_bytes(
+    image_url: str, referer_url: str
+) -> tuple[bytes, str, str]:
+    normalized_url = normalize_remote_url(image_url, referer_url)
+    if not normalized_url:
+        raise ValueError("图片链接为空。")
+
+    request = Request(
+        normalized_url,
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0 Safari/537.36"
+            ),
+            "Referer": referer_url,
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+    )
+
+    with urlopen(request, timeout=20) as response:
+        image_bytes = response.read()
+        content_type = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+
+    if not content_type.startswith("image/"):
+        guessed_type, _ = mimetypes.guess_type(normalized_url)
+        content_type = guessed_type or "image/jpeg"
+
+    return image_bytes, content_type, normalized_url
+
+
+def localize_remote_images_in_html(
+    content_html: str, referer_url: str, temp_dir: Path
+) -> str:
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    def replace_img(match: re.Match[str]) -> str:
+        prefix = match.group(1)
+        src = html.unescape(match.group(2))
+        suffix = match.group(3)
+
+        if not src or src.startswith("data:image/") or src.startswith("/_temp/"):
+            return match.group(0)
+
+        try:
+            image_bytes, content_type, normalized_url = fetch_remote_image_bytes(src, referer_url)
+            guessed_suffix = mimetypes.guess_extension(content_type) or Path(urlparse(normalized_url).path).suffix or ".jpg"
+            filename = f"{uuid.uuid4()}{guessed_suffix.lower()}"
+            output_path = temp_dir / filename
+            output_path.write_bytes(image_bytes)
+            local_src = html.escape(f"/_temp/{filename}", quote=True)
+            return f'{prefix}{local_src}{suffix}'
+        except Exception:
+            proxy_src = html.escape(build_proxy_image_url(src, referer_url), quote=True)
+            return f'{prefix}{proxy_src}{suffix}'
+
+    return re.sub(r'(<img\b[^>]*\bsrc=")([^"]+)(".*?>)', replace_img, content_html, flags=re.I)
+
+
+class WechatArticleHTMLParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.title_parts: list[str] = []
+        self.capture_title = False
+        self.capture_depth = 0
+        self.skip_depth = 0
+        self.content_parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_map = {key: value or "" for key, value in attrs}
+        classes = attr_map.get("class", "")
+        element_id = attr_map.get("id", "")
+
+        if tag == "h1" and (
+            element_id == "activity-name" or "rich_media_title" in classes
+        ):
+            self.capture_title = True
+
+        if tag == "title" and not self.title_parts:
+            self.capture_title = True
+
+        if self.capture_depth == 0 and tag == "div":
+            if (
+                element_id in {"js_content", "img-content"}
+                or "rich_media_content" in classes
+            ):
+                self.capture_depth = 1
+                return
+
+        if self.capture_depth <= 0:
+            return
+
+        self.capture_depth += 1
+
+        if tag in {"script", "style"}:
+            self.skip_depth += 1
+            return
+
+        if self.skip_depth:
+            return
+
+        normalized = self.normalize_start_tag(tag, attr_map)
+        if normalized:
+            self.content_parts.append(normalized)
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.capture_title and tag in {"h1", "title"}:
+            self.capture_title = False
+
+        if self.capture_depth <= 0:
+            return
+
+        if self.skip_depth:
+            if tag in {"script", "style"}:
+                self.skip_depth -= 1
+        else:
+            normalized = self.normalize_end_tag(tag)
+            if normalized:
+                self.content_parts.append(normalized)
+
+        self.capture_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self.capture_title:
+            self.title_parts.append(data)
+
+        if self.capture_depth > 0 and not self.skip_depth:
+            self.content_parts.append(html.escape(data))
+
+    def handle_entityref(self, name: str) -> None:
+        self.handle_data(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self.handle_data(f"&#{name};")
+
+    def normalize_start_tag(self, tag: str, attr_map: dict[str, str]) -> str:
+        if tag in {"strong", "b"}:
+            return "<strong>"
+        if tag in {"em", "i"}:
+            return "<em>"
+        if tag == "br":
+            return "<br />"
+        if tag in {"p", "h1", "h2", "h3", "blockquote", "ul", "ol", "li"}:
+            return f"<{tag}>"
+        if tag == "a":
+            href = attr_map.get("href", "").strip()
+            if href and not href.lower().startswith("javascript:"):
+                return f'<a href="{html.escape(href, quote=True)}">'
+            return "<a>"
+        if tag == "img":
+            src = (
+                attr_map.get("data-src", "").strip()
+                or attr_map.get("src", "").strip()
+                or attr_map.get("data-backsrc", "").strip()
+            )
+            if not src:
+                return ""
+            alt = attr_map.get("alt", "").strip() or "公众号图片"
+            return (
+                f'<img src="{html.escape(src, quote=True)}" '
+                f'alt="{html.escape(alt, quote=True)}" />'
+            )
+        return ""
+
+    def normalize_end_tag(self, tag: str) -> str:
+        if tag in {"strong", "b"}:
+            return "</strong>"
+        if tag in {"em", "i"}:
+            return "</em>"
+        if tag in {"p", "h1", "h2", "h3", "blockquote", "ul", "ol", "li", "a"}:
+            return f"</{tag}>"
+        return ""
+
+    def get_title(self) -> str:
+        raw = normalize_whitespace("".join(self.title_parts))
+        return re.sub(r"\s*[-_－]\s*微信公众平台.*$", "", raw).strip()
+
+    def get_content_html(self) -> str:
+        content = "".join(self.content_parts).strip()
+        content = re.sub(r"(?:<br\s*/?>\s*){3,}", "<br /><br />", content, flags=re.I)
+        return content
+
+
+def fetch_wechat_article(url: str, temp_dir: Path) -> tuple[str, str]:
+    request = Request(
+        url.strip(),
+        headers={
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/123.0 Safari/537.36"
+            )
+        },
+    )
+    with urlopen(request, timeout=15) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        html_text = response.read().decode(charset, errors="replace")
+
+    parser = WechatArticleHTMLParser()
+    parser.feed(html_text)
+    title = parser.get_title()
+    content_html = parser.get_content_html()
+
+    if not content_html:
+        raise ValueError("未能识别到公众号正文内容。")
+
+    if title and "<h1" not in content_html.lower():
+        content_html = f"<h1>{html.escape(title)}</h1>\n{content_html}"
+
+    content_html = localize_remote_images_in_html(content_html, url.strip(), temp_dir)
+
+    return title, content_html
 
 
 def normalize_relationship_target(target: str) -> str:
@@ -668,10 +910,24 @@ def parse_docx_bytes(file_bytes: bytes, temp_dir: Path, source_filename: str = "
 class AppHandler(SimpleHTTPRequestHandler):
     server_version = "DocFormatterHTTP/1.0"
 
+    def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/":
+            self.path = "/text_format_tool.html"
+            super().do_GET()
+            return
+        if parsed.path == "/api/proxy-image":
+            self.handle_proxy_image(parsed)
+            return
+        super().do_GET()
+
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path == "/api/export-docx":
             self.handle_export_docx()
+            return
+        if parsed.path == "/api/import-wechat":
+            self.handle_import_wechat()
             return
         if parsed.path != "/api/convert-docx":
             self.send_error(404, "Unknown endpoint")
@@ -726,6 +982,64 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.send_json(400, {"error": "上传的文件不是有效的 .docx 文档。"})
         except Exception as exc:  # noqa: BLE001
             self.send_json(500, {"error": f"处理失败：{exc}"})
+
+    def handle_proxy_image(self, parsed) -> None:
+        try:
+            params = parse_qs(parsed.query)
+            image_url = params.get("src", [""])[0].strip()
+            referer_url = params.get("referer", [""])[0].strip()
+
+            if not image_url or not referer_url:
+                self.send_error(400, "Missing image src or referer")
+                return
+
+            image_bytes, content_type, _normalized_url = fetch_remote_image_bytes(
+                image_url, referer_url
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(image_bytes)))
+            self.end_headers()
+            self.wfile.write(image_bytes)
+        except HTTPError as exc:
+            self.send_error(exc.code, f"Proxy image fetch failed: {exc.reason}")
+        except URLError as exc:
+            self.send_error(502, f"Proxy image fetch failed: {exc.reason}")
+        except Exception as exc:  # noqa: BLE001
+            self.send_error(500, f"Proxy image fetch failed: {exc}")
+
+    def handle_import_wechat(self) -> None:
+        try:
+            content_length = int(self.headers.get("Content-Length", "0"))
+            body = self.rfile.read(content_length)
+            payload = json.loads(body.decode("utf-8"))
+            article_url = str(payload.get("url", "")).strip()
+
+            if not article_url:
+                self.send_json(400, {"error": "请输入公众号文章链接。"})
+                return
+
+            if not is_wechat_article_url(article_url):
+                self.send_json(400, {"error": "请输入有效的微信公众号文章链接。"})
+                return
+
+            temp_dir = Path.cwd() / "_temp"
+            title, formatted_html = fetch_wechat_article(article_url, temp_dir)
+            self.send_json(
+                200,
+                {
+                    "title": title or "公众号文章",
+                    "formattedHtml": formatted_html,
+                },
+            )
+        except HTTPError as exc:
+            self.send_json(400, {"error": f"抓取失败：远程返回 {exc.code}。"})
+        except URLError as exc:
+            self.send_json(400, {"error": f"抓取失败：{exc.reason}。"})
+        except json.JSONDecodeError:
+            self.send_json(400, {"error": "请求格式错误。"})
+        except Exception as exc:  # noqa: BLE001
+            self.send_json(500, {"error": f"公众号文章导入失败：{exc}"})
 
     def handle_export_docx(self) -> None:
         try:
@@ -795,22 +1109,21 @@ class AppHandler(SimpleHTTPRequestHandler):
         for word in words:
             translated = os.path.join(translated, word)
         return translated
-
-
+    
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run a local web server with DOCX-to-Markdown conversion."
     )
     parser.add_argument(
         "--host",
-        default="127.0.0.1",
-        help="Host to bind to. Default: 127.0.0.1",
+        default=os.environ.get("HOST", "0.0.0.0"),
+        help="Host to bind to. Default: HOST env var or 0.0.0.0",
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=8000,
-        help="Port to bind to. Default: 8000",
+        default=int(os.environ.get("PORT", "8000")),
+        help="Port to bind to. Default: PORT env var or 8000",
     )
     args = parser.parse_args()
 
@@ -818,7 +1131,11 @@ def main() -> None:
     os.chdir(root)
 
     server = ThreadingHTTPServer((args.host, args.port), AppHandler)
-    url = f"http://{args.host}:{args.port}/text_format_tool.html"
+    display_host = args.host
+    if display_host == "0.0.0.0":
+        display_host = "127.0.0.1"
+
+    url = f"http://{display_host}:{args.port}/"
 
     print(f"Serving folder: {root}")
     print(f"Open in browser: {url}")
